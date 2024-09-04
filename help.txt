@@ -1,4 +1,4 @@
-Inicio da aplicação:
+Inicio da aplicação Local:
 
 - Criar o ambiente venv
     python -m venv venv
@@ -7,9 +7,11 @@ Inicio da aplicação:
     .\venv\Scripts\activate
 
 -Baixar as dependencias
+    pip freeze > requirements.txt
     pip install -r requirements.txt
 
 
+Inicio da aplicação Docker:
 
 - Subir o container docker
     docker-compose up --build
