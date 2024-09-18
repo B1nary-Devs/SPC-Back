@@ -1,15 +1,33 @@
-version: '3.8'
+version: "3.8"
 
 services:
+  mongo:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d/
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: spcFlask
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: spc
+
   flask-backend:
     build:
       context: .
-      dockerfile: Dockerfile
+    command: python -u run.py
+    container_name: flask-app
     ports:
       - "5000:5000"
-    networks:
-      - my_network
+    environment:
+      MONGODB_DATABASE: spc
+      MONGODB_USERNAME: spcFlask
+      MONGODB_PASSWORD: admin
+      MONGODB_HOSTNAME: mongo
+    links:
+      - mongo
 
-networks:
-  my_network:
-    driver: bridge
+volumes:
+  mongo-data:
