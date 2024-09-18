@@ -9,10 +9,6 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./mongo-init:/docker-entrypoint-initdb.d/
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: spcFlask
-      MONGO_INITDB_ROOT_PASSWORD: admin
-      MONGO_INITDB_DATABASE: spc
 
   flask-backend:
     build:
@@ -23,8 +19,6 @@ services:
       - "5000:5000"
     environment:
       MONGODB_DATABASE: spc
-      MONGODB_USERNAME: spcFlask
-      MONGODB_PASSWORD: admin
       MONGODB_HOSTNAME: mongo
     links:
       - mongo
