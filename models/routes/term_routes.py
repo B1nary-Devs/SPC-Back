@@ -1,3 +1,4 @@
+from bson import ObjectId
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from models.app import mongo
@@ -9,7 +10,7 @@ terms_collection = mongo.db.termo # colecao de termos do mongo db
 
 @term.route('/', methods=['GET'])
 def hello():
-    return "Hello World!"
+    return 'Hello World!'
 
 
 # Rota para criar um termo
@@ -39,12 +40,17 @@ def create_term():
             'nome_termo': nome_termo,
             'descricao': data['descricao'],
             'prioridade': data['prioridade'],
-            'data_cadastro': datetime.now().timestamp(),
+            'data_cadastro': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             'versao': versionTerm
         }
 
-        result = terms_collection.insert_one(dataTerm)      
-        return jsonify({'message': 'Termo e Condicoes criado com sucesso!', 'term_id': str(result.inserted_id), **result }), 201
+        insert = terms_collection.insert_one(dataTerm)
+        result = terms_collection.find_one({'_id': insert.inserted_id})      
+        result['_id'] = str(result['_id'])
+
+        return jsonify({
+            'Termo inserido': result
+        }), 201
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -71,7 +77,7 @@ def terms_required():
 
 # Rota para retornar os termos com o nome e se filtrar se for passado a versão '/<nome_termo>?versao=1.0'
 @term.route('/<nome_termo>', methods=['GET'])
-def terms_not_required(nome_termo, versao):
+def terms_version(nome_termo):
     try:
         nome_termo = nome_termo.lower()
         versao = request.args.get('versao', type=float)
@@ -96,11 +102,11 @@ def terms_not_required(nome_termo, versao):
 @term.route('/latestTerm', methods=['GET'])
 def latest_term():
     try:        
-        pipeline = [
-            {"$sort": {"nome_termo": 1, "versao": -1}},  
+        terms = list(terms_collection.aggregate([
+            {'$sort': {'nome_termo': 1, 'versao': -1}},  
             {
                 "$group": {
-                    "_id": "$_id",
+                    "_id": "$nome_termo",
                     "descricao": {"$first": "$descricao"},
                     "nome_termo": {"$first": "$nome_termo"},
                     "prioridade": {"$first": "$prioridade"},
@@ -108,11 +114,11 @@ def latest_term():
                     "data_cadastro": {"$first": "$data_cadastro"}
                 }
             }
-        ]
+        ]))
 
-        terms = list(terms_collection.aggregate(pipeline))
+        terms_json = [{**term, '_id': str(term['_id'])} for term in terms]  
 
-        return jsonify(terms), 200
+        return jsonify(terms_json), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

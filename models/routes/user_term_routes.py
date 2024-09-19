@@ -3,7 +3,7 @@ from datetime import datetime
 from models.app import mongo
 
 
-user_term = Blueprint('user_term', __name__)
+user_term = Blueprint('user_term', __name__)# Rota utilizada para acesso '/user_terms'
 users_collection = mongo.db.usuario # colecao de termos do mongo db
 
 
@@ -11,20 +11,23 @@ users_collection = mongo.db.usuario # colecao de termos do mongo db
 @user_term.route('/<user_cpf_cnpj>/insertUserTerm', methods=['POST'])
 def insert__user_terms(user_cpf_cnpj):
     try:
-        data = request.json
+        data = request.get_json(force=True)
 
         dataUser = users_collection.find_one({'cpf_cnpj': user_cpf_cnpj})
         if not dataUser:
             return jsonify({'error': 'Usuario não encontrado!'}), 400
         
-        for x in dataUser['termo']:
+        termoExist = dataUser['termos']
+        for x in termoExist:
             if (x['nome_termo'] == data['nome_termo']) and (x['versao'] == data['versao']):
                 return jsonify({'error': 'Termo e Condicao ja cadastrado!'}), 400
 
         dataUserTerm = {
             'nome_termo': data['nome_termo'],
             'prioridade': data['prioridade'],
-            'data_aceite': datetime.timestamp(),
+            'descricao': data['descricao'],
+            'data_aceite': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+            'data_update': None,
             'aceite': data['aceite'],
             'versao': data['versao']
         }    
@@ -47,7 +50,7 @@ def insert__user_terms(user_cpf_cnpj):
 @user_term.route('/<user_cpf_cnpj>/updateUserTerm', methods=['PUT'])
 def update_user_term(user_cpf_cnpj):
     try:
-        data = request.json
+        data = request.get_json(force=True)
 
         dataUser = users_collection.find_one({'cpf_cnpj': user_cpf_cnpj})
         if not dataUser:
@@ -63,13 +66,13 @@ def update_user_term(user_cpf_cnpj):
         
         update_fields = {}
 
-        if data['aceite'] == True:
-            update_fields['aceite'] = data['aceite']
-            update_fields['data_aceite'] = datetime.timestamp()
-            update_fields['data_update'] = datetime.timestamp()
+        if data['aceite']:
+            update_fields['termos.$.aceite'] = data['aceite']
+            update_fields['termos.$.data_aceite'] = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            update_fields['termos.$.data_update'] = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         else:
-            update_fields['aceite'] = data['aceite']
-            update_fields['data_update'] = datetime.timestamp()
+            update_fields['termos.$.aceite'] = data['aceite']
+            update_fields['termos.$.data_update'] = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         
         if not update_fields:
             return jsonify({'error': 'Nenhum campo para atualizar.'}), 400
@@ -77,13 +80,14 @@ def update_user_term(user_cpf_cnpj):
 
         result = users_collection.update_one(
             {'_id': dataUser['_id'], 'termos.nome_termo': termo_nome, 'termos.versao':versao_termo}, 
-            {'$set': {'termos.$': update_fields}}
+            {'$set': update_fields}
         )
 
         if result.modified_count == 0:
             return jsonify({'error': 'Não foi possível atualizar o termo!'}), 500
 
         return jsonify({'message': 'Termo atualizado com sucesso!'}), 200
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
         
