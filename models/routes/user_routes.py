@@ -16,8 +16,14 @@ def create_user():
         password_hash = generate_password_hash(data['senha'])
         user_termos = data.get('termos', [])
 
-        if not user_termos:
+        existsTermRequired = False
+        for x in user_termos:
+            if (x['prioridade'] == 1):
+                existsTermRequired = True
+        
+        if not user_termos or not existsTermRequired:
             return jsonify({'error': 'Nenhum termo obrigatorio foi aceito pelo usuário.'}), 400
+        
         
         userExists = users_collection.find_one({'cpf_cnpj': data['cpf_cnpj']})
         if userExists:
