@@ -16,3 +16,5 @@ Inicio da aplicação Docker:
 - Subir o container docker
     docker-compose up --build
     (App docker tem que estar rodando)
+
+    Rota para utilizar no docker http://localhost:5000/
