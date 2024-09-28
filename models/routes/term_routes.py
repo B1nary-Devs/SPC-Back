@@ -1,7 +1,7 @@
-from bson import ObjectId
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from models.app import mongo
+from models.utils.sql import insertSql
 
 
 term = Blueprint('term', __name__) # Rota utilizada para acesso '/terms'
@@ -10,6 +10,7 @@ terms_collection = mongo.db.termo # colecao de termos do mongo db
 
 @term.route('/', methods=['GET'])
 def hello():
+    insertSql()
     return 'Hello World!'
 
 

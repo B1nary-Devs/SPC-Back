@@ -1,13 +1,14 @@
 import os
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from flask_pymongo import PyMongo
-from pymongo import MongoClient
 
 mongo = PyMongo()
 
 def create_app():
     app = Flask(__name__)
-
+    CORS(app)
+    
     app.config["MONGO_URI"] = f'mongodb://{os.environ.get("MONGODB_HOSTNAME", "mongo")}:27017/{os.environ.get("MONGODB_DATABASE", "spc")}'
     mongo.init_app(app)
 
