@@ -1,2 +1,2 @@
 # SPC-Back
-Repositório destinado ao back end da aplicação do SPC Grafeno.
+Repository for the back end of the SPC Graphene application.
