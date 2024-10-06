@@ -18,3 +18,148 @@ Inicio da aplicação Docker:
     (App docker tem que estar rodando)
 
     Rota para utilizar no docker http://localhost:5000/
+
+
+
+
+
+
+Exemplo banco:
+{
+  "termos": [
+    {
+      "_id": "ObjectId('...')",          
+      "descricao": "Termo para uso da plataforma",  
+      "nome_termo": "Termo de Uso Padrão",          
+      "prioridade": 1,                             
+      "data_cadastro": "2023-10-01",               
+      "versao": 1.0,                               
+      "termo_item": {                              
+        "termo_item_nome": "Termo para Cadastro",  
+        "termo_item_descricao": "Termo para Cadastro blabaçaçbauababababbaba",       
+        "termo_item_data_cadastro": "2023-10-04",        
+        "termo_item_prioridade": 2,                    
+        "termo_item_versao": 1.0                  
+      }
+    }
+  ],
+
+  "usuarios": [
+    {
+      "_id": "ObjectId('...')",          
+      "nome": "João Silva",            
+      "email": "joao.silva@email.com",
+      "senha": "ddfdsffdf=546516565", 
+      "cpf_cnpj": "123.456.789-00",   
+      "telefone": "(11) 1234-5678",    
+      "celular": "(11) 91234-5678",    
+      "endereco": "Rua Exemplo, 123",     
+      "termo_atual": {                
+        "termo_nome": "Termo de Uso Padrão",  
+        "termo_aceite": true,
+        "termo_versao": 1.2,
+        "termo_item": [
+          {
+            "termo_item_nome": "Termo para Cadastro",
+            "termo_item_aceite": true,
+            "termo_item_data_aceite": "2024-10-04" 
+          }
+        ]                
+      },
+      "termo_log": [                   
+        {
+          "termo_log_nome": "Termo de Uso Padrão",
+          "termo_log_item_nome": "Termo para Cadastro",
+          "termo_log_item_aceite": false,
+          "termo_log_item_update_data": "2024-10-04" 
+        },
+        {
+          "termo_log_nome": "Termo de Uso Padrão",
+          "termo_log_item_nome": "Termo para Cadastro", 
+          "termo_log_item_aceite": true,
+          "termo_log_item_update_data": "2024-10-05"
+        }
+      ]
+    },
+    {
+      "_id": "ObjectId('...')",          
+      "nome": "Rodolfo",            
+      "email": "rodolfo.silva@email.com",
+      "senha": "ddfdsffdf=546516565", 
+      "cpf_cnpj": "123.456.789-00",   
+      "telefone": "(11) 1234-5678",    
+      "celular": "(11) 91234-5678",    
+      "endereco": "Rua Exemplo, 123",     
+      "termo_atual": {                
+        "termo_nome": "Termo de Uso Padrão",  
+        "termo_aceite": true,
+        "termo_versao": 1.2,
+        "termo_item": {
+          "termo_item_nome": "Termo para Cadastro",
+          "termo_item_aceite": true,
+          "termo_item_data_aceite": "2024-10-10" 
+        }                
+      },
+      "termo_log": [                   
+        {
+          "termo_log_nome": "Termo de Uso Padrão",
+          "termo_log_item_nome": "Termo para Cadastro",
+          "termo_log_item_aceite": false,
+          "termo_log_item_update_data": "2024-10-10" 
+        },
+        {
+          "termo_log_nome": "Termo de Uso Padrão",
+          "termo_log_item_nome": "Termo para Cadastro", 
+          "termo_log_item_aceite": true,
+          "termo_log_item_update_data": "2024-10-05"
+        }
+      ]
+    }
+  ]
+}
+
+
+
+
+
+[
+  {
+    "_id": "ObjectId('...')",
+    "nome": "João Silva",
+    "email": "joao.silva@email.com",
+    "cpf_cnpj": "123.456.789-00",
+    "telefone": "(11) 1234-5678",
+    "termo_atual": {
+      "termo_nome": "Termo de Uso Padrão",
+      "descricao": "Termo para uso da plataforma",
+      "data_cadastro": "2023-10-01",
+      "termo_aceite": true,
+      "versao": 1.0,
+      "termo_item": [
+        {
+          "termo_item_nome": "Termo para Cadastro",
+          "termo_item_descricao": "Termo para Cadastro blabaçaçbauababababbaba",
+          "termo_item_data_cadastro": "2023-10-04",
+          "termo_item_aceite": true,
+          "termo_item_data_aceite": "2024-10-04",
+          "termo_item_prioridade": 2,
+          "termo_item_versao": 1.0
+        }
+      ],
+      "termo_log": [                   
+        {
+          "termo_log_nome": "Termo de Uso Padrão",
+          "termo_log_item_nome": "Termo para Cadastro",
+          "termo_log_item_aceite": false,
+          "termo_log_item_update_data": "2024-10-04" 
+        },
+        {
+          "termo_log_nome": "Termo de Uso Padrão",
+          "termo_log_item_nome": "Termo para Cadastro", 
+          "termo_log_item_aceite": true,
+          "termo_log_item_update_data": "2024-10-05"
+        }
+      ]
+    }
+  }
+]

@@ -10,8 +10,11 @@ terms_collection = mongo.db.termo # colecao de termos do mongo db
 
 @term.route('/', methods=['GET'])
 def hello():
-    insertSql()
-    return 'Hello World!'
+    try:
+        insertSql()
+        return 'Hello World!'
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # Rota para criar um termo
@@ -24,9 +27,10 @@ def create_term():
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
-            
-        nome_termo = data['nome_termo'].lower()    
-        
+   
+        nome_termo = data['nome_termo'].lower()
+
+        terms_item = data.get('termo_item', [])
         
         existing_term = terms_collection.find_one(
             {'nome_termo': nome_termo},
@@ -34,15 +38,41 @@ def create_term():
         )
         if existing_term:
             versionTerm = round(existing_term['versao'] + 0.1, 1)
+            existing_term_itens = existing_term.get('termo_item', [])
+            
+            # Dicionário para armazenar as versões dos termos existentes
+            existing_item_versions = {item['termo_item_nome']: item['termo_item_versao'] for item in existing_term_itens}
+            
+            for item in terms_item:
+                item_nome = item['termo_item_nome']
+                
+                # Verifique se o nome do item existe nos itens do termo existente
+                if item_nome in existing_item_versions:
+                    versionTermItem = round(existing_item_versions[item_nome] + 0.1, 1)
+                else:
+                    versionTermItem = 1.0
+
+                item['termo_item_versao'] = versionTermItem
         else:
             versionTerm = 1.0    
         
+
+
         dataTerm = {
             'nome_termo': nome_termo,
             'descricao': data['descricao'],
             'prioridade': data['prioridade'],
             'data_cadastro': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-            'versao': versionTerm
+            'versao': versionTerm,
+            'termo_item': [
+                {
+                    "termo_item_nome": x['termo_item_nome'],  
+                    "termo_item_descricao": x['termo_item_descricao'],       
+                    "termo_item_data_cadastro": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),        
+                    "termo_item_prioridade": 2,                
+                    "termo_item_versao": x['termo_item_versao']
+                } for x in terms_item
+            ]
         }
 
         insert = terms_collection.insert_one(dataTerm)
@@ -57,17 +87,11 @@ def create_term():
         return jsonify({'error': str(e)}), 500
 
 
-# Rota para retornar todos os termos ou retorna com filtro de prioridade caso seja passado na rota '/terms?prioridade=1'
+# Rota para retornar todos os termos '/terms'
 @term.route('/terms', methods=['GET'])
 def terms_required():
     try:
-        prioridade = request.args.get('prioridade', type=int)
-        if prioridade:
-            terms = list(terms_collection.find({'prioridade': prioridade}))
-            if not terms:
-                return jsonify({'error': f'Termo e Condicoes com prioridade: {prioridade} não encontrado!'}), 404
-        else:
-            terms = list(terms_collection.find())
+        terms = list(terms_collection.find())
 
         terms_json = [{**term, '_id': str(term['_id'])} for term in terms]
 
@@ -99,20 +123,20 @@ def terms_version(nome_termo):
         return jsonify({'error': str(e)}), 500
     
 
-# Rota para retornar os termos sem repeticao e com a versao mais atualizada
 @term.route('/latestTerm', methods=['GET'])
 def latest_term():
-    try:        
+    try:
         terms = list(terms_collection.aggregate([
+            # Primeiro, ordena pelos nomes de termos e depois pelas versões em ordem decrescente
             {'$sort': {'nome_termo': 1, 'versao': -1}},  
             {
                 "$group": {
                     "_id": "$nome_termo",
                     "descricao": {"$first": "$descricao"},
-                    "nome_termo": {"$first": "$nome_termo"},
                     "prioridade": {"$first": "$prioridade"},
-                    "versao": {"$first": "$versao"},
-                    "data_cadastro": {"$first": "$data_cadastro"}
+                    "versao": {"$first": "$versao"},  # Pega a versão mais recente
+                    "data_cadastro": {"$first": "$data_cadastro"},
+                    "termo_item": {"$first": "$termo_item"}  # Pega os itens do termo mais recente
                 }
             }
         ]))
