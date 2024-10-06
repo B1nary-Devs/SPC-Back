@@ -2,10 +2,12 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from models.app import mongo
+from models.utils.email import registraEmail
 
 
 user = Blueprint('user', __name__) #Rota utilizada para acesso '/users'
 users_collection = mongo.db.usuario #colecao de usuarios do mongo db
+terms_collection = mongo.db.termo #colecao de termos do mongo db
 
 
 # Rota para criação de usuarios com validacao de termos
@@ -14,16 +16,11 @@ def create_user():
     try:
         data = request.get_json(force=True)
         password_hash = generate_password_hash(data['senha'])
-        user_termos = data.get('termos', [])
-
-        existsTermRequired = False
-        for x in user_termos:
-            if (x['prioridade'] == 1):
-                existsTermRequired = True
+        termo_atual = data.get('termo_atual', {})
+        user_termos_itens = data.get('termo_atual', {}).get('termo_item', [])
         
-        if not user_termos or not existsTermRequired:
+        if not termo_atual:
             return jsonify({'error': 'Nenhum termo obrigatorio foi aceito pelo usuário.'}), 400
-        
         
         userExists = users_collection.find_one({'cpf_cnpj': data['cpf_cnpj']})
         if userExists:
@@ -34,24 +31,31 @@ def create_user():
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
 
-        dataUser = {
-            'nome': data['nome'],
+        registraEmail(data['nome'], data['email'])
+
+        dataUser = {        
+            'nome': data['nome'],            
             'email': data['email'],
-            'cpf_cnpj': data['cpf_cnpj'],
-            'telefone': data['telefone'],
-            'celular': data['celular'],
-            'cep': data['cep'],
-            'endereco': data['endereco'],
             'senha': password_hash,
-            'termos': [{
-                'nome_termo': x['nome_termo'],
-                'prioridade': x['prioridade'],
-                'descricao': x['descricao'],
-                'data_aceite': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                'data_update': None,
-                'aceite': x['aceite'],
-                'versao': x['versao']
-            } for x in user_termos]
+            'perfil': data['perfil'], 
+            'cpf_cnpj': data['cpf_cnpj'],   
+            'telefone': data['telefone'],    
+            'celular': data['celular'],
+            'cep': data['cep'],   
+            'endereco': data['endereco'],     
+            'termo_atual': {       
+                'termo_nome': termo_atual['termo_nome'],  
+                'termo_aceite': termo_atual['termo_aceite'],
+                'termo_versao': termo_atual['termo_versao'],
+                'termo_item': [
+                    {
+                        'termo_item_nome': x['termo_item_nome'],
+                        'termo_item_aceite': x['termo_item_aceite'],
+                        'termo_item_data_aceite': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                    } for x in user_termos_itens
+                ]                
+            },
+            'termo_log': []
         }
 
         insert = users_collection.insert_one(dataUser)
@@ -66,17 +70,56 @@ def create_user():
         return jsonify({'error': str(e)}), 500
     
 
-# Rota para retorno de lista usuarios
 @user.route('/usersList', methods=['GET'])
 def list_users():
     try:
-        usuarios = list(users_collection.find({}))
+        usuarios = users_collection.find({})
         usuarios_json = [{**usuario, '_id': str(usuario['_id'])} for usuario in usuarios]
+        user = []
 
-        return jsonify(usuarios_json), 200
+        for usuario in usuarios_json:
+            termo_atual = usuario.get('termo_atual', {})
+            termo_itens = termo_atual.get('termo_item', [])
+            log_termo = usuario.get('termo_log', [])
+
+            termo = terms_collection.find_one({'nome_termo': termo_atual['termo_nome'], 'versao': termo_atual['termo_versao'] })
+            
+            if termo:
+                termo_atual_completo = {
+                    "termo_nome": termo['nome_termo'],
+                    "descricao": termo['descricao'],
+                    "data_cadastro": termo['data_cadastro'],
+                    "termo_aceite": termo_atual['termo_aceite'],
+                    "versao": termo['versao'],
+                    "termo_item": []
+                }
+                
+                termo_itens_termo = termo.get('termo_item', [])
+
+                for item in termo_itens:
+                    for itens_termo in termo_itens_termo:
+                        if itens_termo['termo_item_nome'] == item['termo_item_nome']:
+                            termo_atual_completo['termo_item'].append({
+                                "termo_item_nome": itens_termo['termo_item_nome'],
+                                "termo_item_descricao": itens_termo['termo_item_descricao'],
+
+                                "termo_item_data_aceite": item.get('termo_item_data_aceite'),
+
+                                "termo_item_aceite": item['termo_item_aceite'],
+                                "termo_item_prioridade": itens_termo['termo_item_prioridade'],
+                                "termo_item_versao": itens_termo['termo_item_versao']
+                            })
+
+                # Atualiza o termo atual do usuário com o termo completo
+                usuario['termo_atual'] = termo_atual_completo
+                usuario['termo_log'] = log_termo
+
+                user.append(usuario)
+
+        return jsonify(user), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 # Rota para retorno de um usuario
 @user.route('/<usuario_cpf_cnpj>', methods=['GET'])
@@ -87,8 +130,47 @@ def oneUser(usuario_cpf_cnpj):
             return jsonify({'error': 'Usuario não encontrado!'}), 400
         
         dataUser['_id'] = str(dataUser['_id']) 
+        user = []
+        
+        termo_atual = dataUser.get('termo_atual', {})
+        termo_itens = termo_atual.get('termo_item', [])
+        log_termo = dataUser.get('termo_log', [])
 
-        return jsonify(dataUser), 200
+        termo = terms_collection.find_one({'nome_termo': termo_atual['termo_nome'], 'versao': termo_atual['termo_versao'] })
+        
+        if termo:
+            termo_atual_completo = {
+                "termo_nome": termo['nome_termo'],
+                "descricao": termo['descricao'],
+                "data_cadastro": termo['data_cadastro'],
+                "termo_aceite": termo_atual['termo_aceite'],
+                "versao": termo['versao'],
+                "termo_item": []
+            }
+            
+            termo_itens_termo = termo.get('termo_item', [])
+
+            for item in termo_itens:
+                for itens_termo in termo_itens_termo:
+                    if itens_termo['termo_item_nome'] == item['termo_item_nome']:
+                        termo_atual_completo['termo_item'].append({
+                            "termo_item_nome": itens_termo['termo_item_nome'],
+                            "termo_item_descricao": itens_termo['termo_item_descricao'],
+
+                            "termo_item_data_aceite": item.get('termo_item_data_aceite'),
+
+                            "termo_item_aceite": item['termo_item_aceite'],
+                            "termo_item_prioridade": itens_termo['termo_item_prioridade'],
+                            "termo_item_versao": itens_termo['termo_item_versao']
+                        })
+
+            # Atualiza o termo atual do usuário com o termo completo
+            dataUser['termo_atual'] = termo_atual_completo
+            dataUser['termo_log'] = log_termo
+
+            user.append(dataUser)
+
+        return jsonify(user), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
