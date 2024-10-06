@@ -2,11 +2,12 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from models.app import mongo
+from models.utils.email import registraEmail
 
 
 user = Blueprint('user', __name__) #Rota utilizada para acesso '/users'
 users_collection = mongo.db.usuario #colecao de usuarios do mongo db
-terms_collection = mongo.db.termos #colecao de termos do mongo db
+terms_collection = mongo.db.termo #colecao de termos do mongo db
 
 
 # Rota para criação de usuarios com validacao de termos
@@ -30,10 +31,13 @@ def create_user():
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
 
+        registraEmail(data['nome'], data['email'])
+
         dataUser = {        
             'nome': data['nome'],            
             'email': data['email'],
-            'senha': password_hash, 
+            'senha': password_hash,
+            'perfil': data['perfil'], 
             'cpf_cnpj': data['cpf_cnpj'],   
             'telefone': data['telefone'],    
             'celular': data['celular'],
@@ -69,52 +73,50 @@ def create_user():
 @user.route('/usersList', methods=['GET'])
 def list_users():
     try:
-        # Busca todos os usuários da coleção 'usuarios'
-        usuarios = list(users_collection.find({}))
-
-        # Prepara os dados dos usuários convertendo o ObjectId para string
+        usuarios = users_collection.find({})
         usuarios_json = [{**usuario, '_id': str(usuario['_id'])} for usuario in usuarios]
+        user = []
 
-        # Itera sobre os usuários para buscar e adicionar os termos associados
         for usuario in usuarios_json:
             termo_atual = usuario.get('termo_atual', {})
-            termo_atual_nome = termo_atual.get('termo_nome')
+            termo_itens = termo_atual.get('termo_item', [])
+            log_termo = usuario.get('termo_log', [])
 
-            if termo_atual_nome:
-                # Busca o termo correspondente na collection 'termos' pelo nome
-                termo = terms_collection.find_one({'nome_termo': termo_atual_nome})
+            termo = terms_collection.find_one({'nome_termo': termo_atual['termo_nome'], 'versao': termo_atual['termo_versao'] })
+            
+            if termo:
+                termo_atual_completo = {
+                    "termo_nome": termo['nome_termo'],
+                    "descricao": termo['descricao'],
+                    "data_cadastro": termo['data_cadastro'],
+                    "termo_aceite": termo_atual['termo_aceite'],
+                    "versao": termo['versao'],
+                    "termo_item": []
+                }
                 
-                if termo:
-                    # Combina os dados do termo com os dados do termo atual do usuário
-                    termo_atual_completo = {
-                        "termo_nome": termo.get('nome_termo'),
-                        "descricao": termo.get('descricao'),
-                        "data_cadastro": termo.get('data_cadastro'),
-                        "termo_aceite": termo_atual.get('termo_aceite'),
-                        "versao": termo.get('versao'),
-                        "termo_item": []
-                    }
-                    
-                    # Itera sobre os itens do termo do usuário e combina com o termo completo
-                    for item in termo_atual.get('termo_item', []):
-                        termo_item_info = next((ti for ti in termo.get('termo_item') if ti['termo_item_nome'] == item['termo_item_nome']), {})
-                        termo_atual_completo['termo_item'].append({
-                            "termo_item_nome": termo_item_info.get('termo_item_nome', item['termo_item_nome']),
-                            "termo_item_descricao": termo_item_info.get('termo_item_descricao'),
-                            "termo_item_data_cadastro": termo_item_info.get('termo_item_data_cadastro'),
-                            "termo_item_aceite": item.get('termo_item_aceite'),
-                            "termo_item_data_aceite": item.get('termo_item_data_aceite'),
-                            "termo_item_prioridade": termo_item_info.get('termo_item_prioridade'),
-                            "termo_item_versao": termo_item_info.get('termo_item_versao')
-                        })
+                termo_itens_termo = termo.get('termo_item', [])
 
-                    # Adiciona o log de termos também
-                    termo_atual_completo['termo_log'] = usuario.get('termo_log', [])
-                    
-                    # Atualiza o termo atual do usuário com o termo completo
-                    usuario['termo_atual'] = termo_atual_completo
+                for item in termo_itens:
+                    for itens_termo in termo_itens_termo:
+                        if itens_termo['termo_item_nome'] == item['termo_item_nome']:
+                            termo_atual_completo['termo_item'].append({
+                                "termo_item_nome": itens_termo['termo_item_nome'],
+                                "termo_item_descricao": itens_termo['termo_item_descricao'],
 
-        return jsonify(usuarios_json), 200
+                                "termo_item_data_aceite": item.get('termo_item_data_aceite'),
+
+                                "termo_item_aceite": item['termo_item_aceite'],
+                                "termo_item_prioridade": itens_termo['termo_item_prioridade'],
+                                "termo_item_versao": itens_termo['termo_item_versao']
+                            })
+
+                # Atualiza o termo atual do usuário com o termo completo
+                usuario['termo_atual'] = termo_atual_completo
+                usuario['termo_log'] = log_termo
+
+                user.append(usuario)
+
+        return jsonify(user), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -128,8 +130,47 @@ def oneUser(usuario_cpf_cnpj):
             return jsonify({'error': 'Usuario não encontrado!'}), 400
         
         dataUser['_id'] = str(dataUser['_id']) 
+        user = []
+        
+        termo_atual = dataUser.get('termo_atual', {})
+        termo_itens = termo_atual.get('termo_item', [])
+        log_termo = dataUser.get('termo_log', [])
 
-        return jsonify(dataUser), 200
+        termo = terms_collection.find_one({'nome_termo': termo_atual['termo_nome'], 'versao': termo_atual['termo_versao'] })
+        
+        if termo:
+            termo_atual_completo = {
+                "termo_nome": termo['nome_termo'],
+                "descricao": termo['descricao'],
+                "data_cadastro": termo['data_cadastro'],
+                "termo_aceite": termo_atual['termo_aceite'],
+                "versao": termo['versao'],
+                "termo_item": []
+            }
+            
+            termo_itens_termo = termo.get('termo_item', [])
+
+            for item in termo_itens:
+                for itens_termo in termo_itens_termo:
+                    if itens_termo['termo_item_nome'] == item['termo_item_nome']:
+                        termo_atual_completo['termo_item'].append({
+                            "termo_item_nome": itens_termo['termo_item_nome'],
+                            "termo_item_descricao": itens_termo['termo_item_descricao'],
+
+                            "termo_item_data_aceite": item.get('termo_item_data_aceite'),
+
+                            "termo_item_aceite": item['termo_item_aceite'],
+                            "termo_item_prioridade": itens_termo['termo_item_prioridade'],
+                            "termo_item_versao": itens_termo['termo_item_versao']
+                        })
+
+            # Atualiza o termo atual do usuário com o termo completo
+            dataUser['termo_atual'] = termo_atual_completo
+            dataUser['termo_log'] = log_termo
+
+            user.append(dataUser)
+
+        return jsonify(user), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

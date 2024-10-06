@@ -2,8 +2,12 @@ from models.app import mongo
 from datetime import datetime
 
 def insertSql():
-    try:
+    insertTermo()
+    insertAdmin()
+   
 
+def insertTermo():
+    try:
         terms_collection = mongo.db.termo # colecao de termos do mongo db
         versionTerm = 1.0
         termo = [
@@ -53,9 +57,55 @@ def insertSql():
             if (existing_termo):
                 continue
             else:
-                terms_collection.insert_one(x)
+                terms_collection.insert_one(x)    
 
     except Exception as e:
         print(f"Erro: {str(e)}")
 
-    
+def insertAdmin():
+    try:
+        users_collection = mongo.db.usuario # colecao de usuario do mongo db
+        versionTerm = 1.0
+        user = {        
+            "nome": "Administrador",            
+            "email": "administrador@admin.com",
+            "senha": "admin",
+            "perfil": 'Admin', 
+            "cpf_cnpj": "0",   
+            "telefone": "00000000",    
+            "celular": "00000000",
+            "cep": 00000000,
+            "endereco": "Rua Exemplo, 123",     
+            "termo_atual": {                
+                "termo_nome": "termo de uso",  
+                "termo_aceite": True,
+                "termo_versao": versionTerm,
+                "termo_item": [
+                    {
+                        "termo_item_nome": "recebimento de email",
+                        "termo_item_aceite": True
+                    },
+                    {
+                        "termo_item_nome": "conteudo",
+                        "termo_item_aceite": False
+                    },
+                    {
+                        "termo_item_nome": "protecao de dados",
+                        "termo_item_aceite": True
+                    },
+                    {
+                        "termo_item_nome": "frequencia",
+                        "termo_item_aceite": True
+                    }
+                ]                
+            },
+            "termo_log": []
+        }
+        nome = user['nome']
+        existing_user = users_collection.find_one({'nome': nome})
+        if not existing_user:
+            users_collection.insert_one(user)
+        
+
+    except Exception as e:
+        print(f"Erro: {str(e)}")        

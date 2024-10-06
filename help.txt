@@ -21,145 +21,107 @@ Inicio da aplicação Docker:
 
 
 
+Diretorio do docker que esta o backup do nome e email dos usuarios
+/app/models/utils/user_register.txt
 
+Modelo do banco:
 
-
-Exemplo banco:
 {
   "termos": [
     {
-      "_id": "ObjectId('...')",          
-      "descricao": "Termo para uso da plataforma",  
-      "nome_termo": "Termo de Uso Padrão",          
-      "prioridade": 1,                             
-      "data_cadastro": "2023-10-01",               
-      "versao": 1.0,                               
-      "termo_item": {                              
-        "termo_item_nome": "Termo para Cadastro",  
-        "termo_item_descricao": "Termo para Cadastro blabaçaçbauababababbaba",       
-        "termo_item_data_cadastro": "2023-10-04",        
-        "termo_item_prioridade": 2,                    
-        "termo_item_versao": 1.0                  
-      }
-    }
-  ],
-
-  "usuarios": [
-    {
-      "_id": "ObjectId('...')",          
-      "nome": "João Silva",            
-      "email": "joao.silva@email.com",
-      "senha": "ddfdsffdf=546516565", 
-      "cpf_cnpj": "123.456.789-00",   
-      "telefone": "(11) 1234-5678",    
-      "celular": "(11) 91234-5678",    
-      "endereco": "Rua Exemplo, 123",     
-      "termo_atual": {                
-        "termo_nome": "Termo de Uso Padrão",  
-        "termo_aceite": true,
-        "termo_versao": 1.2,
-        "termo_item": [
-          {
-            "termo_item_nome": "Termo para Cadastro",
-            "termo_item_aceite": true,
-            "termo_item_data_aceite": "2024-10-04" 
-          }
-        ]                
-      },
-      "termo_log": [                   
+      "data_cadastro": "06/10/2024 17:06:49",
+      "descricao": "Ao aceitar estes termos, você autoriza a coleta, uso e compartilhamento de seus dados pessoais com terceiros para fins relacionados à prestação de nossos serviços. Isso pode incluir, mas não se limita a, empresas de análise de dados, plataformas de publicidade e parceiros comerciais. \n\n**Finalidade do Compartilhamento:** Os dados coletados serão compartilhados com terceiros apenas quando necessário para: \n- Melhorar a qualidade dos serviços prestados; \n- Personalizar as ofertas e experiências para o usuário; \n- Atender às exigências legais e regulatórias aplicáveis; \n- Facilitar a execução de contratos e acordos. \n\n**Proteção de Dados:** Nos comprometemos a garantir que todos os terceiros com quem compartilhamos seus dados possuam políticas de privacidade adequadas e utilizem os dados compartilhados em conformidade com a legislação vigente. \n\n**Revogação de Consentimento:** Você tem o direito de revogar seu consentimento para o compartilhamento de dados a qualquer momento, solicitando a exclusão dos seus dados pessoais. No entanto, a revogação poderá impactar a prestação de determinados serviços. \n\n**Direitos do Usuário:** Você pode solicitar, a qualquer momento: \n- Acesso aos seus dados; \n- Correção de informações erradas ou incompletas; \n- Eliminação de dados que não forem mais necessários para a prestação dos serviços. \n\n**Alterações no Termo de Uso:** Nos reservamos o direito de atualizar este Termo de Uso a qualquer momento. As alterações entrarão em vigor a partir da data de publicação.",
+      "nome_termo": "termo de uso",
+      "prioridade": 1,
+      "versao": 1.0
+      "termo_item": [
         {
-          "termo_log_nome": "Termo de Uso Padrão",
-          "termo_log_item_nome": "Termo para Cadastro",
-          "termo_log_item_aceite": false,
-          "termo_log_item_update_data": "2024-10-04" 
+          "termo_item_data_cadastro": "06/10/2024 17:06:49",
+          "termo_item_descricao": "Ao aceitar este termo, você concorda em receber comunicações por email, incluindo newsletters, atualizações, informações promocionais e convites para eventos. As comunicações serão enviadas periodicamente, conforme suas preferências.",
+          "termo_item_nome": "recebimento de email",
+          "termo_item_prioridade": 2,
+          "termo_item_versao": 1.0
         },
         {
-          "termo_log_nome": "Termo de Uso Padrão",
-          "termo_log_item_nome": "Termo para Cadastro", 
-          "termo_log_item_aceite": true,
-          "termo_log_item_update_data": "2024-10-05"
-        }
-      ]
-    },
-    {
-      "_id": "ObjectId('...')",          
-      "nome": "Rodolfo",            
-      "email": "rodolfo.silva@email.com",
-      "senha": "ddfdsffdf=546516565", 
-      "cpf_cnpj": "123.456.789-00",   
-      "telefone": "(11) 1234-5678",    
-      "celular": "(11) 91234-5678",    
-      "endereco": "Rua Exemplo, 123",     
-      "termo_atual": {                
-        "termo_nome": "Termo de Uso Padrão",  
-        "termo_aceite": true,
-        "termo_versao": 1.2,
-        "termo_item": {
-          "termo_item_nome": "Termo para Cadastro",
-          "termo_item_aceite": true,
-          "termo_item_data_aceite": "2024-10-10" 
-        }                
-      },
-      "termo_log": [                   
-        {
-          "termo_log_nome": "Termo de Uso Padrão",
-          "termo_log_item_nome": "Termo para Cadastro",
-          "termo_log_item_aceite": false,
-          "termo_log_item_update_data": "2024-10-10" 
+          "termo_item_data_cadastro": "06/10/2024 17:06:49",
+          "termo_item_descricao": "As comunicações podem incluir: notícias e atualizações sobre produtos e serviços; ofertas especiais e promoções; e informações relevantes sobre o setor ou tópicos de interesse. Você pode optar por não receber mais emails promocionais a qualquer momento, clicando no link \"Cancelar Inscrição\" nos emails. Essa ação não afetará comunicações importantes relacionadas ao uso de nossos serviços.",
+          "termo_item_nome": "conteudo",
+          "termo_item_prioridade": 2,
+          "termo_item_versao": 1.0
         },
         {
-          "termo_log_nome": "Termo de Uso Padrão",
-          "termo_log_item_nome": "Termo para Cadastro", 
-          "termo_log_item_aceite": true,
-          "termo_log_item_update_data": "2024-10-05"
+          "termo_item_data_cadastro": "06/10/2024 17:06:49",
+          "termo_item_descricao": "Seu endereço de email será tratado com confidencialidade e não será compartilhado com terceiros sem o seu consentimento, exceto quando exigido por lei ou para a operação dos serviços solicitados.",
+          "termo_item_nome": "protecao de dados",
+          "termo_item_prioridade": 2,
+          "termo_item_versao": 1.0
+        },
+        {
+          "termo_item_data_cadastro": "06/10/2024 17:06:49",
+          "termo_item_descricao": "Nós limitamos o número de emails enviados para garantir que as comunicações sejam relevantes. No entanto, a frequência pode variar conforme promoções ou atualizações importantes.",
+          "termo_item_nome": "frequencia",
+          "termo_item_prioridade": 2,
+          "termo_item_versao": 1.0
         }
       ]
     }
   ]
-}
 
-
-
-
-
-[
-  {
-    "_id": "ObjectId('...')",
-    "nome": "João Silva",
-    "email": "joao.silva@email.com",
-    "cpf_cnpj": "123.456.789-00",
-    "telefone": "(11) 1234-5678",
-    "termo_atual": {
-      "termo_nome": "Termo de Uso Padrão",
-      "descricao": "Termo para uso da plataforma",
-      "data_cadastro": "2023-10-01",
-      "termo_aceite": true,
-      "versao": 1.0,
-      "termo_item": [
+  "usuarios": [
+    {
+      "celular": "11912345678",
+      "cep": 123456,
+      "cpf_cnpj": "4",
+      "email": "joao.silva@email.com",
+      "endereco": "Rua Exemplo, 123",
+      "nome": "Julio Cesar",
+      "senha": "scrypt:32768:8:1$OQNwB9Ojv8uYEL9P$2b9a891bd00ae5dc704209d95c72bbf442a4a514fd1dcc17b1d525fbf3a1d16bfb4211ed47bad61aa06d410341e341322b6090e6d0c7ed4f0ef9dfe86e07b932",
+      "perfil": "Credor",
+      "telefone": "1112345678",
+      "termo_atual": {
+        "termo_aceite": true,
+        "termo_item": [
+          {
+            "termo_item_aceite": true,
+            "termo_item_nome": "recebimento de email"
+          },
+          {
+            "termo_item_aceite": true,
+            "termo_item_nome": "conteudo"
+          },
+          {
+            "termo_item_aceite": false,
+            "termo_item_nome": "protecao de dados"
+          },
+          {
+            "termo_item_aceite": false,
+            "termo_item_nome": "frequencia"
+          }
+        ],
+        "termo_nome": "termo de uso",
+        "termo_versao": 1.0
+      },
+      "termo_log": [
         {
-          "termo_item_nome": "Termo para Cadastro",
-          "termo_item_descricao": "Termo para Cadastro blabaçaçbauababababbaba",
-          "termo_item_data_cadastro": "2023-10-04",
-          "termo_item_aceite": true,
-          "termo_item_data_aceite": "2024-10-04",
-          "termo_item_prioridade": 2,
-          "termo_item_versao": 1.0
-        }
-      ],
-      "termo_log": [                   
-        {
-          "termo_log_nome": "Termo de Uso Padrão",
-          "termo_log_item_nome": "Termo para Cadastro",
           "termo_log_item_aceite": false,
-          "termo_log_item_update_data": "2024-10-04" 
+          "termo_log_item_nome": "conteudo",
+          "termo_log_item_update_data": "06/10/2024 17:12:02",
+          "termo_log_nome": "termo de uso"
         },
         {
-          "termo_log_nome": "Termo de Uso Padrão",
-          "termo_log_item_nome": "Termo para Cadastro", 
           "termo_log_item_aceite": true,
-          "termo_log_item_update_data": "2024-10-05"
+          "termo_log_item_nome": "protecao de dados",
+          "termo_log_item_update_data": "06/10/2024 17:12:02",
+          "termo_log_nome": "termo de uso"
+        },
+        {
+          "termo_log_item_aceite": true,
+          "termo_log_item_nome": "frequencia",
+          "termo_log_item_update_data": "06/10/2024 17:12:02",
+          "termo_log_nome": "termo de uso"
         }
-      ]
+	    ] 
     }
-  }
-]
+  ]
+}
+
