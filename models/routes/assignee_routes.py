@@ -184,48 +184,6 @@ def delete_assignee(cessionaria_cnpj):
         return jsonify({'error': str(e)}), 500
 
 
-@assignee.route('/<cessionaria_cnpj>/updateAssignee', methods=['PUT'])
-def update_assignee(cessionaria_cnpj):
-    try:
-        data = request.get_json(force=True)
-        dataAssignee = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
-
-        if not dataAssignee:
-            return jsonify({'error': 'Cessionária não encontrada!'}), 400
-
-        update_fields = {}
-
-        # Atualiza campos gerais da cessionária
-        if 'cessionaria_nome' in data:
-            update_fields['cessionaria_nome'] = data['cessionaria_nome']
-        if 'cessionaria_cnpj' in data:
-            update_fields['cessionaria_cnpj'] = data['cessionaria_cnpj']
-
-        # Atualiza o subdocumento cessionaria_sacado, se fornecido
-        if 'cessionaria_sacado' in data:
-            cessionaria_sacado = data['cessionaria_sacado']
-            update_fields['cessionaria_sacado'] = {
-                'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
-                'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data'),
-                'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
-            }
-
-        # Verifica se há campos para atualizar
-        if not update_fields:
-            return jsonify({'error': 'Nenhum campo para atualizar.'}), 400
-
-        # Atualiza o documento no banco de dados
-        result = assignee_collection.update_one({'cessionaria_cnpj': cessionaria_cnpj}, {'$set': update_fields})
-        if result.matched_count == 0:
-            return jsonify({'error': 'Cessionária não encontrada!'}), 404
-
-        return jsonify({'message': 'Cessionária atualizada com sucesso!'}), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 @assignee.route('/<cessionaria_cnpj>/addSacado', methods=['PUT'])
 def add_sacado(cessionaria_cnpj):
     try:
