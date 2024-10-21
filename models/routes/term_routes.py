@@ -23,29 +23,17 @@ def create_term():
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
-<<<<<<< Updated upstream
-            
-        nome_termo = data['nome_termo'].lower()    
-        
-        
-=======
 
         nome_termo = data['nome_termo'].lower()
 
         terms_item = data.get('termo_item', [])
 
->>>>>>> Stashed changes
         existing_term = terms_collection.find_one(
             {'nome_termo': nome_termo},
             sort=[('versao', -1)]  # Ordenar por versão decrescente
         )
         if existing_term:
             versionTerm = round(existing_term['versao'] + 0.1, 1)
-<<<<<<< Updated upstream
-        else:
-            versionTerm = 1.0    
-        
-=======
             existing_term_itens = existing_term.get('termo_item', [])
 
             # Dicionário para armazenar as versões dos termos existentes
@@ -66,15 +54,11 @@ def create_term():
             versionTerm = 1.0
 
             # Criar o novo termo
->>>>>>> Stashed changes
         dataTerm = {
             'nome_termo': nome_termo,
             'descricao': data['descricao'],
             'prioridade': data['prioridade'],
             'data_cadastro': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-<<<<<<< Updated upstream
-            'versao': versionTerm
-=======
             'versao': versionTerm,
             'termo_item': [
                 {
@@ -85,7 +69,6 @@ def create_term():
                     "termo_item_versao": x['termo_item_versao']
                 } for x in terms_item
             ]
->>>>>>> Stashed changes
         }
 
         # Inserir o novo termo no banco
@@ -142,12 +125,7 @@ def create_term():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-<<<<<<< Updated upstream
-
-# Rota para retornar todos os termos ou retorna com filtro de prioridade caso seja passado na rota '/terms?prioridade=1'
-=======
 # Rota para retornar todos os termos '/terms'
->>>>>>> Stashed changes
 @term.route('/terms', methods=['GET'])
 def terms_required():
     try:

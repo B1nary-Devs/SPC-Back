@@ -2,15 +2,11 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from models.app import mongo
-<<<<<<< Updated upstream
-
-=======
 from models.utils.email import registraEmail
 from .term_routes import buscar_ultimo_termo
 import os
 import csv
 from .salvar_email import salvar_no_google_sheets
->>>>>>> Stashed changes
 
 user = Blueprint('user', __name__) #Rota utilizada para acesso '/users'
 users_collection = mongo.db.usuario #colecao de usuarios do mongo db
@@ -24,19 +20,6 @@ def create_user():
     try:
         data = request.get_json(force=True)
         password_hash = generate_password_hash(data['senha'])
-<<<<<<< Updated upstream
-        user_termos = data.get('termos', [])
-
-        existsTermRequired = False
-        for x in user_termos:
-            if (x['prioridade'] == 1):
-                existsTermRequired = True
-        
-        if not user_termos or not existsTermRequired:
-            return jsonify({'error': 'Nenhum termo obrigatorio foi aceito pelo usuário.'}), 400
-        
-        
-=======
 
         ultimo_termo = buscar_ultimo_termo()
 
@@ -47,7 +30,6 @@ def create_user():
         if 'termo_item' not in ultimo_termo or not ultimo_termo['termo_item']:
             return jsonify({'error': f'O último termo não contém itens válidos. aqui ->{ultimo_termo}'}), 400
 
->>>>>>> Stashed changes
         userExists = users_collection.find_one({'cpf_cnpj': data['cpf_cnpj']})
         if userExists:
             return jsonify({'error': f'O usuario com cpf/cnpj: {userExists["cpf_cnpj"]} já existe'}), 400
@@ -57,11 +39,6 @@ def create_user():
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
 
-<<<<<<< Updated upstream
-        dataUser = {
-            'nome': data['nome'],
-            'email': data['email'],
-=======
         registraEmail(data['nome'], data['email'])
 
         # Inserção de usuário e termo log com o último termo obtido
@@ -70,24 +47,11 @@ def create_user():
             'email': data['email'],
             'senha': password_hash,
             'perfil': data['perfil'],
->>>>>>> Stashed changes
             'cpf_cnpj': data['cpf_cnpj'],
             'telefone': data['telefone'],
             'celular': data['celular'],
             'cep': data['cep'],
             'endereco': data['endereco'],
-<<<<<<< Updated upstream
-            'senha': password_hash,
-            'termos': [{
-                'nome_termo': x['nome_termo'],
-                'prioridade': x['prioridade'],
-                'descricao': x['descricao'],
-                'data_aceite': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                'data_update': None,
-                'aceite': x['aceite'],
-                'versao': x['versao']
-            } for x in user_termos]
-=======
             'termo_atual': {
                 'termo_nome': ultimo_termo['nome_termo'],
                 'termo_aceite': False,  # Não aceito ainda
@@ -102,7 +66,6 @@ def create_user():
                 ]
             },
             'termo_log': []  # O termo log está vazio porque é um novo usuário
->>>>>>> Stashed changes
         }
 
         # Insere o usuário no MongoDB
