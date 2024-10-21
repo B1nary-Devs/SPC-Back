@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mongo:
     image: mongo
@@ -22,6 +20,8 @@ services:
       MONGODB_HOSTNAME: mongo
     links:
       - mongo
+    volumes:
+      - ./models/routes:/app/models/routes  # Monta o diretório local dentro do container
 
 volumes:
   mongo-data:
