@@ -1,10 +1,8 @@
 from flask import Blueprint, request, jsonify
-from datetime import datetime
-from werkzeug.security import generate_password_hash
 from models.app import mongo
 from models.routes.user_routes import users_collection
-from models.utils.email import registraEmail
 
+duplicata_collection = mongo.db.duplicatas
 assignee = Blueprint('assignee', __name__)  # Rota utilizada para acesso '/assigne'
 assignee_collection = mongo.db.assigne  # colecao de usuarios do mongo db
 
@@ -22,30 +20,26 @@ def create_assignee():
         if not userExists:
             return jsonify({'error': 'CNPJ não encontrado na base de usuários. A cessionária só pode ser criada se o CNPJ já estiver registrado como um usuário.'}), 400
 
-        # Verifica se a cessionária já existe na coleção de cessionárias
         cessionariaExists = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
         if cessionariaExists:
             return jsonify({'error': f'Cessionária com CNPJ {cessionariaExists["cessionaria_cnpj"]} já existe'}), 400
 
-        # Extrai o subdocumento cessionaria_sacado, se ele for fornecido
         cessionaria_sacado = data.get('cessionaria_sacado', None)
 
-        # Valida campos obrigatórios
         dataCessionaria = {
             'cessionaria_nome': data['cessionaria_nome'],
             'cessionaria_cnpj': cessionaria_cnpj
         }
 
-        # Se os dados do sacado forem fornecidos, adicioná-los ao documento
         if cessionaria_sacado:
             dataCessionaria['cessionaria_sacado'] = {
                 'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                 'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data'),
+                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
+                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
                 'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
             }
 
-        # Insere a cessionária no MongoDB
         assignee_collection.insert_one(dataCessionaria)
 
         return jsonify({'message': 'Cessionária criada com sucesso!'}), 201
@@ -57,7 +51,6 @@ def create_assignee():
 @assignee.route('/listAssignees', methods=['GET'])
 def list_assignees():
     try:
-        # Busca todas as cessionárias na coleção
         cessionarias = assignee_collection.find({})
         cessionarias_json = [{**cessionaria, '_id': str(cessionaria['_id'])} for cessionaria in cessionarias]
         assignee_list = []
@@ -65,22 +58,20 @@ def list_assignees():
         for cessionaria in cessionarias_json:
             cessionaria_sacado = cessionaria.get('cessionaria_sacado', {})
 
-            # Se o sacado existir, adiciona as informações do sacado ao resultado
             if cessionaria_sacado:
                 sacado_completo = {
                     'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                     'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                    'cessionaria_sacado_duplicadas_data': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data'),
+                    'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
+                    'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
                     'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
                 }
                 cessionaria['cessionaria_sacado'] = sacado_completo
             else:
                 cessionaria['cessionaria_sacado'] = None
 
-            # Adiciona a cessionária à lista final
             assignee_list.append(cessionaria)
 
-        # Retorna a lista completa das cessionárias
         return jsonify(assignee_list), 200
 
     except Exception as e:
@@ -109,7 +100,8 @@ def one_assignee(cessionaria_cnpj):
             sacado_completo = {
                 'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                 'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data'),
+                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
+                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
                 'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
             }
             # Atualiza o subdocumento sacado da cessionária
@@ -148,7 +140,8 @@ def update_assignee(cessionaria_cnpj):
             update_fields['cessionaria_sacado'] = {
                 'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                 'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data'),
+                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
+                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
                 'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
             }
 
@@ -206,7 +199,8 @@ def add_sacado(cessionaria_cnpj):
             'cessionaria_sacado': {
                 'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                 'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data'),
+                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
+                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
                 'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
             }
         }

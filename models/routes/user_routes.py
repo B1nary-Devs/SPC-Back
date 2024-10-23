@@ -9,7 +9,7 @@ user = Blueprint('user', __name__) #Rota utilizada para acesso '/users'
 users_collection = mongo.db.usuario #colecao de usuarios do mongo db
 terms_collection = mongo.db.termo #colecao de termos do mongo db
 
-
+#Inserir validação de CPF/CNPJ, no momento só deve ser aceito
 # Rota para criação de usuarios com validacao de termos
 @user.route('/createUser', methods=['POST'])
 def create_user():
@@ -34,7 +34,8 @@ def create_user():
         registraEmail(data['nome'], data['email'])
 
         dataUser = {        
-            'nome': data['nome'],            
+            'nome': data['nome'],
+            'empresa': data['empresa'],
             'email': data['email'],
             'senha': password_hash,
             'perfil': data['perfil'], 
@@ -190,6 +191,8 @@ def updateUser(usuario_cpf_cnpj):
 
         if 'nome' in data:
             update_fields['nome'] = data['nome']
+        if 'empresa' in data:
+            update_fields['empresa'] = data['empresa']
         if 'email' in data:
             update_fields['email'] = data['email']
         if 'cpf_cnpj' in data:
