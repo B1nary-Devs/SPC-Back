@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mongo:
     image: mongo
@@ -21,6 +19,8 @@ services:
       MONGODB_HOSTNAME: mongo
     links:
       - mongo
+    volumes:
+      - ./models/routes:/app/models/routes 
 
 volumes:
   mongo-data:
