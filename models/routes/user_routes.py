@@ -342,6 +342,8 @@ def login_user():
     user = users_collection.find_one({"email": email})
 
     if user and check_password_hash(user['senha'], password):
-        return jsonify({"message": "Login bem-sucedido"}), 200
+        # Login bem-sucedido
+        cpf_cnpj = user['cpf_cnpj']
+        return oneUser(cpf_cnpj)  # Chama o método oneUser e retorna a resposta
     else:
         return jsonify({"message": "Email ou senha incorretos"}), 401
