@@ -2,7 +2,6 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from models.app import mongo
-from models.utils.email import registraEmail
 from .term_routes import buscar_ultimo_termo
 import os
 import csv
@@ -39,7 +38,6 @@ def create_user():
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
 
-        registraEmail(data['nome'], data['email'])
 
         # Inserção de usuário e termo log com o último termo obtido
         dataUser = {
@@ -140,6 +138,8 @@ def update_user_and_term(user_cpf_cnpj):
             update_fields['cep'] = data['cep']
         if 'endereco' in data:
             update_fields['endereco'] = data['endereco']
+        if 'perfil' in data:
+            update_fields['perfil'] = data['perfil']
         if 'senha' in data:
             # Se a senha for alterada, gerar o hash da nova senha
             password_hash = generate_password_hash(data['senha'])
