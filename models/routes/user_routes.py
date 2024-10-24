@@ -157,9 +157,7 @@ def oneUser(usuario_cpf_cnpj):
                         termo_atual_completo['termo_item'].append({
                             "termo_item_nome": itens_termo['termo_item_nome'],
                             "termo_item_descricao": itens_termo['termo_item_descricao'],
-
                             "termo_item_data_aceite": item.get('termo_item_data_aceite'),
-
                             "termo_item_aceite": item['termo_item_aceite'],
                             "termo_item_prioridade": itens_termo['termo_item_prioridade'],
                             "termo_item_versao": itens_termo['termo_item_versao']
@@ -239,3 +237,21 @@ def deleteUser(usuario_cpf_cnpj):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+from flask import request, jsonify
+from werkzeug.security import check_password_hash
+
+@user.route('/login', methods=['POST'])
+def login_user():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('senha')
+
+    if not email or not password:
+        return jsonify({"message": "Email e senha são obrigatórios"}), 400
+
+    user = users_collection.find_one({"email": email})
+
+    if user and check_password_hash(user['senha'], password):
+        return jsonify({"message": "Login bem-sucedido"}), 200
+    else:
+        return jsonify({"message": "Email ou senha incorretos"}), 401

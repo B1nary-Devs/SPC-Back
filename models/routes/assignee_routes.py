@@ -1,12 +1,15 @@
 from flask import Blueprint, request, jsonify
 from models.app import mongo
 from models.routes.user_routes import users_collection
+from datetime import datetime
 
+# Inicialização das coleções do MongoDB
 duplicata_collection = mongo.db.duplicatas
-assignee = Blueprint('assignee', __name__)  # Rota utilizada para acesso '/assigne'
-assignee_collection = mongo.db.assigne  # colecao de usuarios do mongo db
+assignee = Blueprint('assignee', __name__)
+assignee_collection = mongo.db.assigne
 
-# Rota para criação de usuarios com validacao de termos
+
+# Rota para criação de usuários com validação de termos
 @assignee.route('/createAssignee', methods=['POST'])
 def create_assignee():
     try:
@@ -18,28 +21,22 @@ def create_assignee():
         # Verifica se o CNPJ já existe na coleção de usuários
         userExists = users_collection.find_one({'cpf_cnpj': cessionaria_cnpj})
         if not userExists:
-            return jsonify({'error': 'CNPJ não encontrado na base de usuários. A cessionária só pode ser criada se o CNPJ já estiver registrado como um usuário.'}), 400
+            return jsonify({
+                               'error': 'CNPJ não encontrado na base de usuários. A cessionária só pode ser criada se o CNPJ já estiver registrado como um usuário.'}), 400
 
         cessionariaExists = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
         if cessionariaExists:
             return jsonify({'error': f'Cessionária com CNPJ {cessionariaExists["cessionaria_cnpj"]} já existe'}), 400
 
-        cessionaria_sacado = data.get('cessionaria_sacado', None)
-
+        # Inicializa o dicionário da cessionária
         dataCessionaria = {
             'cessionaria_nome': data['cessionaria_nome'],
-            'cessionaria_cnpj': cessionaria_cnpj
+            'cessionaria_cnpj': cessionaria_cnpj,
+            'cessionaria_score': data.get('cessionaria_score', None),
+            'cessionaria_sacado': data.get('cessionaria_sacado', None)  # Adiciona diretamente aqui
         }
 
-        if cessionaria_sacado:
-            dataCessionaria['cessionaria_sacado'] = {
-                'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
-                'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
-                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
-                'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
-            }
-
+        # Insere a cessionária na coleção
         assignee_collection.insert_one(dataCessionaria)
 
         return jsonify({'message': 'Cessionária criada com sucesso!'}), 201
@@ -53,22 +50,29 @@ def list_assignees():
     try:
         cessionarias = assignee_collection.find({})
         cessionarias_json = [{**cessionaria, '_id': str(cessionaria['_id'])} for cessionaria in cessionarias]
+
         assignee_list = []
-
         for cessionaria in cessionarias_json:
+            # Verifica se cessionaria_sacado é um dicionário
             cessionaria_sacado = cessionaria.get('cessionaria_sacado', {})
-
-            if cessionaria_sacado:
-                sacado_completo = {
+            if isinstance(cessionaria_sacado, dict):
+                cessionaria['cessionaria_sacado'] = {
                     'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                     'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                    'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
-                    'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
-                    'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
+                    'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get(
+                        'cessionaria_sacado_duplicadas_data_inicial'),
+                    'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get(
+                        'cessionaria_sacado_duplicadas_data_final'),
+                    'cessionaria_sacado_duplicata_status': cessionaria_sacado.get(
+                        'cessionaria_sacado_duplicata_status'),
+                    'cessionaria_sacado_nome': cessionaria_sacado.get('cessionaria_sacado_nome'),
+                    'cessionaria_sacado_empresa': cessionaria_sacado.get('cessionaria_sacado_empresa'),
+                    'cessionaria_sacado_contato': cessionaria_sacado.get('cessionaria_sacado_contato'),
+                    'cessionaria_sacado_email': cessionaria_sacado.get('cessionaria_sacado_email'),
+                    'cessionaria_sacado_data_pagamento': cessionaria_sacado.get('cessionaria_sacado_data_pagamento')
                 }
-                cessionaria['cessionaria_sacado'] = sacado_completo
             else:
-                cessionaria['cessionaria_sacado'] = None
+                cessionaria['cessionaria_sacado'] = None  # Caso não seja um dicionário
 
             assignee_list.append(cessionaria)
 
@@ -90,29 +94,27 @@ def one_assignee(cessionaria_cnpj):
         # Converte o campo _id para string
         dataAssignee['_id'] = str(dataAssignee['_id'])
 
-        # Inicializa a lista que será retornada
-        assignee = []
-
-        # Extrai o subdocumento de cessionaria_sacado (se houver)
+        # Extrai o subdocumento de cessionaria_sacado
         cessionaria_sacado = dataAssignee.get('cessionaria_sacado', {})
-
-        if cessionaria_sacado:
-            sacado_completo = {
+        if isinstance(cessionaria_sacado, dict):  # Verifica se é um dicionário
+            dataAssignee['cessionaria_sacado'] = {
                 'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
                 'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
-                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
-                'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
+                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get(
+                    'cessionaria_sacado_duplicadas_data_inicial'),
+                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get(
+                    'cessionaria_sacado_duplicadas_data_final'),
+                'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status'),
+                'cessionaria_sacado_nome': cessionaria_sacado.get('cessionaria_sacado_nome'),
+                'cessionaria_sacado_empresa': cessionaria_sacado.get('cessionaria_sacado_empresa'),
+                'cessionaria_sacado_contato': cessionaria_sacado.get('cessionaria_sacado_contato'),
+                'cessionaria_sacado_email': cessionaria_sacado.get('cessionaria_sacado_email'),
+                'cessionaria_sacado_data_pagamento': cessionaria_sacado.get('cessionaria_sacado_data_pagamento')
             }
-            # Atualiza o subdocumento sacado da cessionária
-            dataAssignee['cessionaria_sacado'] = sacado_completo
         else:
             dataAssignee['cessionaria_sacado'] = None
 
-        # Adiciona a cessionária completa à lista final
-        assignee.append(dataAssignee)
-
-        return jsonify(assignee), 200
+        return jsonify(dataAssignee), 200  # Retorna diretamente o objeto cessionário
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -122,6 +124,8 @@ def one_assignee(cessionaria_cnpj):
 def update_assignee(cessionaria_cnpj):
     try:
         data = request.get_json(force=True)
+
+        # Busca a cessionária com base no CNPJ fornecido
         dataAssignee = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
 
         if not dataAssignee:
@@ -129,94 +133,126 @@ def update_assignee(cessionaria_cnpj):
 
         update_fields = {}
 
-        if 'cessionaria_nome' in data:
-            update_fields['cessionaria_nome'] = data['cessionaria_nome']
-        if 'cessionaria_cnpj' in data:
-            update_fields['cessionaria_cnpj'] = data['cessionaria_cnpj']
+        # Atualiza os campos da cessionária, se fornecido
+        for field in ['cessionaria_nome', 'cessionaria_cnpj', 'cessionaria_score']:
+            if field in data:
+                update_fields[field] = data[field]
 
-        # Atualiza o subdocumento cessionaria_sacado, se fornecido
+        # Atualiza os dados da cessionária
+        if update_fields:
+            assignee_collection.update_one({'cessionaria_cnpj': cessionaria_cnpj}, {'$set': update_fields})
+
+        # Verifica se há um novo sacado a ser adicionado
         if 'cessionaria_sacado' in data:
-            cessionaria_sacado = data['cessionaria_sacado']
-            update_fields['cessionaria_sacado'] = {
-                'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
-                'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
-                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
-                'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
-            }
+            new_sacado = data['cessionaria_sacado']
+            sacado_id = new_sacado.get('cessionaria_sacado_id')
 
-        if not update_fields:
-            return jsonify({'error': 'Nenhum campo para atualizar.'}), 400
+            # Verifica se o sacado já existe para essa cessionária
+            sacado_exists = assignee_collection.find_one({
+                'cessionaria_cnpj': cessionaria_cnpj,
+                'cessionaria_sacado.cessionaria_sacado_id': sacado_id
+            })
 
-        result = assignee_collection.update_one({'cessionaria_cnpj': cessionaria_cnpj}, {'$set': update_fields})
-        if result.matched_count == 0:
-            return jsonify({'error': 'Cessionária não encontrada!'}), 404
+            if sacado_exists:
+                # Atualiza o sacado existente
+                update_sacado_fields = {key: new_sacado.get(key) for key in [
+                    'cessionaria_sacado_score', 'cessionaria_sacado_duplicadas_data_inicial',
+                    'cessionaria_sacado_duplicadas_data_final', 'cessionaria_sacado_duplicata_status',
+                    'cessionaria_sacado_nome', 'cessionaria_sacado_empresa',
+                    'cessionaria_sacado_contato', 'cessionaria_sacado_email',
+                    'cessionaria_sacado_data_pagamento'
+                ]}
+                assignee_collection.update_one(
+                    {'cessionaria_cnpj': cessionaria_cnpj, 'cessionaria_sacado.cessionaria_sacado_id': sacado_id},
+                    {'$set': update_sacado_fields}
+                )
+            else:
+                # Inicializa cessionaria_sacado como um array se não existir
+                existing_data = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+                if not isinstance(existing_data.get('cessionaria_sacado', []), list):
+                    assignee_collection.update_one(
+                        {'cessionaria_cnpj': cessionaria_cnpj},
+                        {'$set': {'cessionaria_sacado': []}}
+                    )
 
-        return jsonify({'message': 'Cessionária atualizada com sucesso!'}), 200
+                # Adiciona um novo sacado
+                new_sacado_data = {
+                    'cessionaria_sacado_id': sacado_id,
+                    'cessionaria_sacado_score': new_sacado.get('cessionaria_sacado_score'),
+                    'cessionaria_sacado_duplicadas_data_inicial': new_sacado.get(
+                        'cessionaria_sacado_duplicadas_data_inicial'),
+                    'cessionaria_sacado_duplicadas_data_final': new_sacado.get(
+                        'cessionaria_sacado_duplicadas_data_final'),
+                    'cessionaria_sacado_duplicata_status': new_sacado.get('cessionaria_sacado_duplicata_status'),
+                    'cessionaria_sacado_nome': new_sacado.get('cessionaria_sacado_nome'),
+                    'cessionaria_sacado_empresa': new_sacado.get('cessionaria_sacado_empresa'),
+                    'cessionaria_sacado_contato': new_sacado.get('cessionaria_sacado_contato'),
+                    'cessionaria_sacado_email': new_sacado.get('cessionaria_sacado_email'),
+                    'cessionaria_sacado_data_pagamento': new_sacado.get('cessionaria_sacado_data_pagamento')
+                }
+
+                assignee_collection.update_one(
+                    {'cessionaria_cnpj': cessionaria_cnpj},
+                    {'$push': {'cessionaria_sacado': new_sacado_data}}
+                )
+
+        return jsonify({'message': 'Cessionária e sacado atualizados com sucesso!'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@assignee.route('/<cessionaria_cnpj>/deleteAssignee', methods=['DELETE'])
-def delete_assignee(cessionaria_cnpj):
-    try:
-        dataAssignee = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+@assignee.route('/<cessionaria_cnpj>/duplicatas/<status>', methods=['GET'])
+def get_duplicatas_by_cnpj_and_status(cessionaria_cnpj, status):
+    valid_status = ["Finalizado", "Vencido", "A vencer"]
 
-        if not dataAssignee:
-            return jsonify({'error': 'Cessionária não encontrada!'}), 400
+    # Verifica se o status informado é válido
+    if status not in valid_status:
+        return jsonify({"message": "Status inválido"}), 400
 
-        result = assignee_collection.delete_one({'cessionaria_cnpj': cessionaria_cnpj})
+    # Busca a cessionária pelo CNPJ
+    cessionaria = assignee_collection.find_one({"cessionaria_cnpj": cessionaria_cnpj})
 
-        if result.deleted_count == 0:
-            return jsonify({'error': 'Não foi possível excluir a cessionária.'}), 500
+    if not cessionaria:
+        return jsonify({"message": "Cessionária não encontrada"}), 404
 
-        return jsonify({'message': 'Cessionária excluída com sucesso!'}), 200
+    # Atualiza o status das duplicatas baseado na data atual
+    data_atual = datetime.now()
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if isinstance(cessionaria.get('cessionaria_sacado', {}), dict):
+        duplicatas = cessionaria['cessionaria_sacado'].get('duplicatas', [])
+        for duplicata in duplicatas:
+            # Pula as duplicatas com status 'Finalizado'
+            if duplicata['cessionaria_sacado_duplicata_status'] == "Finalizado":
+                continue
 
+            # Atualiza o status para 'Vencido' se a data de duplicata passou da data atual
+            duplicata_data = datetime.fromtimestamp(duplicata['cessionaria_sacado_duplicadas_data'])
+            if duplicata_data < data_atual:
+                duplicata['cessionaria_sacado_duplicata_status'] = "Vencido"
+            else:
+                duplicata['cessionaria_sacado_duplicata_status'] = "A vencer"
 
-@assignee.route('/<cessionaria_cnpj>/addSacado', methods=['PUT'])
-def add_sacado(cessionaria_cnpj):
-    try:
-        # Verfica se a cessionária existe
-        cessionaria = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+        # Filtra as duplicatas pelo status atualizado
+        duplicatas_filtradas = [
+            duplicata for duplicata in duplicatas
+            if duplicata['cessionaria_sacado_duplicata_status'] == status
+        ]
+    else:
+        duplicatas_filtradas = []  # Se cessionaria_sacado não é um dicionário, não há duplicatas
 
-        if not cessionaria:
-            return jsonify({'error': 'Cessionária não encontrada!'}), 404
-
-        # Obtem os dados do sacado do request
-        data = request.get_json(force=True)
-        cessionaria_sacado = data.get('cessionaria_sacado', {})
-
-        # Verifica se os dados do sacado foram fornecidos corretamente
-        if not cessionaria_sacado:
-            return jsonify({'error': 'Os dados do sacado são obrigatórios!'}), 400
-
-        # Atualiza ou insere os dados do sacado na cessionaria existente
-        update_fields = {
-            'cessionaria_sacado': {
-                'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
-                'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
-                'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
-                'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status')
-            }
+    # Retorna todos os dados da cessionária, incluindo o cessionaria_sacado e as duplicatas filtradas
+    return jsonify({
+        "cessionaria_usuario_id": cessionaria.get("cessionaria_usuario_id"),
+        "cessionaria_nome": cessionaria.get("cessionaria_nome"),
+        "cessionaria_cnpj": cessionaria.get("cessionaria_cnpj"),
+        "cessionaria_sacado": {
+            "cessionaria_sacado_id": cessionaria["cessionaria_sacado"].get("cessionaria_sacado_id") if isinstance(
+                cessionaria.get('cessionaria_sacado', {}), dict) else None,
+            "cessionaria_sacado_nome": cessionaria["cessionaria_sacado"].get("cessionaria_sacado_nome") if isinstance(
+                cessionaria.get('cessionaria_sacado', {}), dict) else None,
+            "cessionaria_sacado_score": cessionaria["cessionaria_sacado"].get("cessionaria_sacado_score") if isinstance(
+                cessionaria.get('cessionaria_sacado', {}), dict) else None,
+            "duplicatas_filtradas": duplicatas_filtradas  # Duplicatas filtradas pelo status
         }
-
-        # Atualiza a cessionaria existente no banco de dados
-        result = assignee_collection.update_one(
-            {'cessionaria_cnpj': cessionaria_cnpj},
-            {'$set': update_fields}
-        )
-
-        if result.matched_count == 0:
-            return jsonify({'error': 'Não foi possível atualizar o sacado para a cessionária.'}), 500
-
-        return jsonify({'message': 'Sacado adicionado/atualizado com sucesso para a cessionária!'}), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
+    }), 200
