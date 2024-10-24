@@ -9,8 +9,11 @@ terms_collection = mongo.db.termo # colecao de termos do mongo db
 users_collection = mongo.db.usuario #colecao de usuarios do mongo db
 @term.route('/', methods=['GET'])
 def hello():
-    insertSql()
-    return 'Hello World!'
+    try:
+        insertSql()
+        return 'Hello World!'
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # Rota para criar um termo
@@ -23,6 +26,7 @@ def create_term():
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'O campo {field} é obrigatório!'}), 400
+
 
         nome_termo = data['nome_termo'].lower()
 
@@ -51,9 +55,11 @@ def create_term():
 
                 item['termo_item_versao'] = versionTermItem
         else:
+
             versionTerm = 1.0
 
             # Criar o novo termo
+
         dataTerm = {
             'nome_termo': nome_termo,
             'descricao': data['descricao'],
@@ -66,6 +72,7 @@ def create_term():
                     "termo_item_descricao": x['termo_item_descricao'],
                     "termo_item_data_cadastro": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                     "termo_item_prioridade": 2,
+
                     "termo_item_versao": x['termo_item_versao']
                 } for x in terms_item
             ]
@@ -125,17 +132,12 @@ def create_term():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 # Rota para retornar todos os termos '/terms'
 @term.route('/terms', methods=['GET'])
 def terms_required():
     try:
-        prioridade = request.args.get('prioridade', type=int)
-        if prioridade:
-            terms = list(terms_collection.find({'prioridade': prioridade}))
-            if not terms:
-                return jsonify({'error': f'Termo e Condicoes com prioridade: {prioridade} não encontrado!'}), 404
-        else:
-            terms = list(terms_collection.find())
+        terms = list(terms_collection.find())
 
         terms_json = [{**term, '_id': str(term['_id'])} for term in terms]
 
@@ -167,20 +169,20 @@ def terms_version(nome_termo):
         return jsonify({'error': str(e)}), 500
     
 
-# Rota para retornar os termos sem repeticao e com a versao mais atualizada
 @term.route('/latestTerm', methods=['GET'])
 def latest_term():
-    try:        
+    try:
         terms = list(terms_collection.aggregate([
+            # Primeiro, ordena pelos nomes de termos e depois pelas versões em ordem decrescente
             {'$sort': {'nome_termo': 1, 'versao': -1}},  
             {
                 "$group": {
                     "_id": "$nome_termo",
                     "descricao": {"$first": "$descricao"},
-                    "nome_termo": {"$first": "$nome_termo"},
                     "prioridade": {"$first": "$prioridade"},
-                    "versao": {"$first": "$versao"},
-                    "data_cadastro": {"$first": "$data_cadastro"}
+                    "versao": {"$first": "$versao"},  # Pega a versão mais recente
+                    "data_cadastro": {"$first": "$data_cadastro"},
+                    "termo_item": {"$first": "$termo_item"}  # Pega os itens do termo mais recente
                 }
             }
         ]))
