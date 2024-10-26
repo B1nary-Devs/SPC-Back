@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from bson import ObjectId
 from models.app import mongo
 from models.routes.user_routes import users_collection
 from datetime import datetime
@@ -191,6 +192,11 @@ def update_assignee(cessionaria_cnpj):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+from datetime import datetime
+from flask import jsonify
+
+
 @assignee.route('/<cessionaria_cnpj>/duplicatas/<status>', methods=['GET'])
 def get_duplicatas_by_cnpj_and_status(cessionaria_cnpj, status):
     valid_status = ["Finalizado", "Vencido", "A vencer"]
@@ -205,46 +211,34 @@ def get_duplicatas_by_cnpj_and_status(cessionaria_cnpj, status):
     if not cessionaria:
         return jsonify({"message": "Cessionária não encontrada"}), 404
 
-    # Atualiza o status das duplicatas baseado na data atual
+    # Converte o ObjectId para string para evitar erros de serialização
+    cessionaria["_id"] = str(cessionaria["_id"])
+
+    # Filtra os sacados da cessionária pelo status solicitado
     data_atual = datetime.now()
+    sacados_filtrados = []
 
-    if isinstance(cessionaria.get('cessionaria_sacado', {}), dict):
-        duplicatas = cessionaria['cessionaria_sacado'].get('duplicatas', [])
-        for duplicata in duplicatas:
-            # Pula as duplicatas com status 'Finalizado'
-            if duplicata['cessionaria_sacado_duplicata_status'] == "Finalizado":
-                continue
+    if isinstance(cessionaria.get('cessionaria_sacado', []), list):
+        for sacado in cessionaria['cessionaria_sacado']:
+            # Atualiza o status da duplicata de acordo com a data
+            duplicata_data_inicial = sacado.get('cessionaria_sacado_duplicadas_data_inicial')
+            duplicata_data_final = sacado.get('cessionaria_sacado_duplicadas_data_final')
 
-            # Atualiza o status para 'Vencido' se a data de duplicata passou da data atual
-            duplicata_data = datetime.fromtimestamp(duplicata['cessionaria_sacado_duplicadas_data'])
-            if duplicata_data < data_atual:
-                duplicata['cessionaria_sacado_duplicata_status'] = "Vencido"
-            else:
-                duplicata['cessionaria_sacado_duplicata_status'] = "A vencer"
+            if duplicata_data_final:
+                duplicata_data_final = datetime.fromtimestamp(duplicata_data_final)
+                if duplicata_data_final < data_atual:
+                    sacado['cessionaria_sacado_duplicata_status'] = "Vencido"
+                else:
+                    sacado['cessionaria_sacado_duplicata_status'] = "A vencer"
 
-        # Filtra as duplicatas pelo status atualizado
-        duplicatas_filtradas = [
-            duplicata for duplicata in duplicatas
-            if duplicata['cessionaria_sacado_duplicata_status'] == status
-        ]
-    else:
-        duplicatas_filtradas = []  # Se cessionaria_sacado não é um dicionário, não há duplicatas
+            # Adiciona o sacado à lista se o status for o desejado
+            if sacado.get('cessionaria_sacado_duplicata_status') == status:
+                sacados_filtrados.append(sacado)
 
-    # Retorna todos os dados da cessionária, incluindo o cessionaria_sacado e as duplicatas filtradas
-    return jsonify({
-        "cessionaria_usuario_id": cessionaria.get("cessionaria_usuario_id"),
-        "cessionaria_nome": cessionaria.get("cessionaria_nome"),
-        "cessionaria_cnpj": cessionaria.get("cessionaria_cnpj"),
-        "cessionaria_sacado": {
-            "cessionaria_sacado_id": cessionaria["cessionaria_sacado"].get("cessionaria_sacado_id") if isinstance(
-                cessionaria.get('cessionaria_sacado', {}), dict) else None,
-            "cessionaria_sacado_nome": cessionaria["cessionaria_sacado"].get("cessionaria_sacado_nome") if isinstance(
-                cessionaria.get('cessionaria_sacado', {}), dict) else None,
-            "cessionaria_sacado_score": cessionaria["cessionaria_sacado"].get("cessionaria_sacado_score") if isinstance(
-                cessionaria.get('cessionaria_sacado', {}), dict) else None,
-            "duplicatas_filtradas": duplicatas_filtradas  # Duplicatas filtradas pelo status
-        }
-    }), 200
+    # Retorna todos os dados da cessionária, incluindo somente os sacados com o status desejado
+    cessionaria['cessionaria_sacado'] = sacados_filtrados
+
+    return jsonify(cessionaria), 200
 
 @assignee.route('/<cessionaria_cnpj>/deleteAssignee', methods=['DELETE'])
 def delete_assignee(cessionaria_cnpj):
