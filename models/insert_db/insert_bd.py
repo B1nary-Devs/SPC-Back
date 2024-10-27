@@ -7,7 +7,7 @@ client = pymongo.MongoClient("mongodb://localhost:27017/")
 
 # Acesso ao banco de dados e à coleção
 db = client.get_database("BancoDeTeste")
-collection = db.get_collection("termo")
+collection = db.get_collection("assignee")
 
 
 # Função para verificar se um documento cabe dentro do limite de 16MB
