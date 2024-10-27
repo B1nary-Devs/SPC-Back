@@ -1,9 +1,12 @@
 from models.app import mongo
-from datetime import datetime
+from datetime import datetime, timedelta
+
 
 def insertSql():
     insertTermo()
     insertAdmin()
+    insertCessionaria()
+    insertDuplicatas()
    
 
 def insertTermo():
@@ -67,7 +70,8 @@ def insertAdmin():
         users_collection = mongo.db.usuario # colecao de usuario do mongo db
         versionTerm = 1.0
         user = {        
-            "nome": "Administrador",            
+            "nome": "Administrador",
+            "nome": "SPC-Back",
             "email": "administrador@admin.com",
             "senha": "admin",
             "perfil": 'Admin', 
@@ -108,4 +112,61 @@ def insertAdmin():
         
 
     except Exception as e:
-        print(f"Erro: {str(e)}")        
+        print(f"Erro: {str(e)}")
+
+def insertCessionaria():
+    try:
+        cessionaria_collection = mongo.db.cessionarias  # Coleção de cessionárias
+        cessionaria = {
+            "cessionaria_usuario_id": "001",
+            "cessionaria_nome": "Cessionária Exemplo",
+            "cessionaria_cnpj": "12.345.678/0001-99",
+            "cessionaria_sacado": {
+                "cessionaria_sacado_id": "123",
+                "cessionaria_sacado_score": 750,
+                "cessionaria_sacado_duplicatas_data": datetime.now().strftime('%d/%m/%Y'),
+                "cessionaria_sacado_duplicata_status": "aberto"
+            }
+        }
+        existing_cessionaria = cessionaria_collection.find_one({'cessionaria_usuario_id': cessionaria['cessionaria_usuario_id']})
+        if not existing_cessionaria:
+            cessionaria_collection.insert_one(cessionaria)
+
+    except Exception as e:
+        print(f"Erro: {str(e)}")
+
+def insertDuplicatas():
+    try:
+        duplicata_collection = mongo.db.duplicatas  # Coleção de duplicatas
+
+        duplicatas = [
+            {
+                "duplicata_id": "DUP001",
+                "duplicata_valor": 1000.00,
+                "duplicata_vencimento": (datetime.now() + timedelta(days=10)).strftime('%Y-%m-%d'),  # A vencer
+                "duplicata_status": "aberto",
+                "cessionaria_id": "001"
+            },
+            {
+                "duplicata_id": "DUP002",
+                "duplicata_valor": 2000.00,
+                "duplicata_vencimento": (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d'),  # Vencida
+                "duplicata_status": "vencido",
+                "cessionaria_id": "001"
+            },
+            {
+                "duplicata_id": "DUP003",
+                "duplicata_valor": 1500.00,
+                "duplicata_vencimento": (datetime.now() + timedelta(days=3)).strftime('%Y-%m-%d'),  # A vencer em breve
+                "duplicata_status": "aberto",
+                "cessionaria_id": "001"
+            }
+        ]
+
+        for duplicata in duplicatas:
+            existing_duplicata = duplicata_collection.find_one({'duplicata_id': duplicata['duplicata_id']})
+            if not existing_duplicata:
+                duplicata_collection.insert_one(duplicata)
+
+    except Exception as e:
+        print(f"Erro: {str(e)}")
