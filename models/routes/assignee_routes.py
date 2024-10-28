@@ -11,6 +11,9 @@ assignee_collection = mongo.db.assigne
 
 
 # Rota para criação de usuários com validação de termos
+from datetime import datetime
+from flask import jsonify, request
+
 @assignee.route('/createAssignee', methods=['POST'])
 def create_assignee():
     try:
@@ -19,28 +22,47 @@ def create_assignee():
         # Extrai dados gerais da cessionária
         cessionaria_cnpj = data.get('cessionaria_cnpj')
 
-        # Verifica se o CNPJ já existe na coleção de usuários
-        userExists = users_collection.find_one({'cpf_cnpj': cessionaria_cnpj})
-        if not userExists:
-            return jsonify({
-                'error': 'CNPJ não encontrado na base de usuários. A cessionária só pode ser criada se o CNPJ já estiver registrado como um usuário.'
-            }), 400
-
-        cessionariaExists = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
-        if cessionariaExists:
-            return jsonify({'error': f'Cessionária com CNPJ {cessionariaExists["cessionaria_cnpj"]} já existe'}), 400
+        # Verifica se o CNPJ já existe na coleção de cessionárias
+        cessionaria_exists = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+        if cessionaria_exists:
+            return jsonify({'error': f'Cessionária com CNPJ {cessionaria_cnpj} já existe'}), 400
 
         # Inicializa o dicionário da cessionária
         dataCessionaria = {
             'cessionaria_nome': data['cessionaria_nome'],
             'cessionaria_cnpj': cessionaria_cnpj,
-            'cessionaria_score': data.get('cessionaria_score', None),
-            'cessionaria_sacado': data.get('cessionaria_sacado', [])
+            'cessionaria_score': data.get('cessionaria_score'),
+            'cessionaria_sacado': []
         }
 
-        # Se existir um sacado fornecido, adiciona à lista de sacados
-        if 'cessionaria_sacado' in data:
-            dataCessionaria['cessionaria_sacado'] = [data['cessionaria_sacado']]
+        # Se existir sacados fornecidos, adiciona à lista de sacados
+        if 'cessionaria_sacado' in data and isinstance(data['cessionaria_sacado'], list):
+            for sacado in data['cessionaria_sacado']:
+                try:
+                    # Converte as datas para strings no formato 'YYYY-MM-DD' para evitar problemas com o MongoDB
+                    duplicada_data_inicial = sacado.get('cessionaria_sacado_duplicadas_data_inicial')
+                    duplicada_data_final = sacado.get('cessionaria_sacado_duplicadas_data_final')
+                    data_pagamento = sacado.get('cessionaria_sacado_data_pagamento')
+
+                    # Cria o dicionário do sacado
+                    sacado_data = {
+                        'cessionaria_sacado_id': sacado['cessionaria_sacado_id'],
+                        'cessionaria_sacado_cnpj': str(sacado['cessionaria_sacado_cnpj']),
+                        'cessionaria_sacado_score': sacado['cessionaria_sacado_score'],
+                        'cessionaria_sacado_duplicadas_data_inicial': duplicada_data_inicial,
+                        'cessionaria_sacado_duplicadas_data_final': duplicada_data_final,
+                        'cessionaria_sacado_duplicata_status': sacado['cessionaria_sacado_duplicata_status'],
+                        'cessionaria_sacado_nome': sacado['cessionaria_sacado_nome'],
+                        'cessionaria_sacado_contato': sacado.get('cessionaria_sacado_contato'),
+                        'cessionaria_sacado_email': sacado.get('cessionaria_sacado_email'),
+                        'cessionaria_sacado_data_pagamento': data_pagamento
+                    }
+
+                    dataCessionaria['cessionaria_sacado'].append(sacado_data)
+
+                except Exception as e:
+                    # Log para identificar problemas específicos com o sacado
+                    return jsonify({'error': f'Erro ao processar sacado: {str(e)}', 'sacado': sacado}), 400
 
         # Insere a cessionária na coleção
         assignee_collection.insert_one(dataCessionaria)
@@ -59,24 +81,13 @@ def list_assignees():
 
         assignee_list = []
         for cessionaria in cessionarias_json:
-            # Verifica se cessionaria_sacado existe
+            # Verifica se cessionaria_sacado existe e é uma lista
             cessionaria_sacado = cessionaria.get('cessionaria_sacado', None)
 
-            if isinstance(cessionaria_sacado, dict):
-                cessionaria['cessionaria_sacado'] = {
-                    'cessionaria_sacado_id': cessionaria_sacado.get('cessionaria_sacado_id'),
-                    'cessionaria_sacado_score': cessionaria_sacado.get('cessionaria_sacado_score'),
-                    'cessionaria_sacado_duplicadas_data_inicial': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_inicial'),
-                    'cessionaria_sacado_duplicadas_data_final': cessionaria_sacado.get('cessionaria_sacado_duplicadas_data_final'),
-                    'cessionaria_sacado_duplicata_status': cessionaria_sacado.get('cessionaria_sacado_duplicata_status'),
-                    'cessionaria_sacado_nome': cessionaria_sacado.get('cessionaria_sacado_nome'),
-                    'cessionaria_sacado_empresa': cessionaria_sacado.get('cessionaria_sacado_empresa'),
-                    'cessionaria_sacado_contato': cessionaria_sacado.get('cessionaria_sacado_contato'),
-                    'cessionaria_sacado_email': cessionaria_sacado.get('cessionaria_sacado_email'),
-                    'cessionaria_sacado_data_pagamento': cessionaria_sacado.get('cessionaria_sacado_data_pagamento')
-                }
+            if isinstance(cessionaria_sacado, list) and cessionaria_sacado:
+                cessionaria['cessionaria_sacado'] = cessionaria_sacado
             else:
-                cessionaria['cessionaria_sacado'] = None  # Caso não seja um dicionário ou não exista
+                cessionaria['cessionaria_sacado'] = None  # Caso não seja uma lista ou esteja vazia
 
             assignee_list.append(cessionaria)
 
@@ -84,7 +95,6 @@ def list_assignees():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 
 @assignee.route('/<cessionaria_cnpj>', methods=['GET'])
