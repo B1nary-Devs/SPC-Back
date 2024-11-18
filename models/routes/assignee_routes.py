@@ -55,7 +55,12 @@ def create_assignee():
                         'cessionaria_sacado_nome': sacado['cessionaria_sacado_nome'],
                         'cessionaria_sacado_contato': sacado.get('cessionaria_sacado_contato'),
                         'cessionaria_sacado_email': sacado.get('cessionaria_sacado_email'),
-                        'cessionaria_sacado_data_pagamento': data_pagamento
+                        'cessionaria_sacado_data_pagamento': data_pagamento,
+                        'cessionaria_sacado_duplicadas_valor': sacado['cessionaria_sacado_duplicadas_valor'],
+                        'cessionaria_sacado_estado': sacado['cessionaria_sacado_estado'],
+                        'cessionaria_sacado_lagitude': sacado['cessionaria_sacado_lagitude'],
+                        'cessionaria_sacado_longitude': sacado['cessionaria_sacado_longitude'],
+                        'cessionaria_sacado_chance_fraude': sacado['cessionaria_sacado_chance_fraude']
                     }
 
                     dataCessionaria['cessionaria_sacado'].append(sacado_data)
@@ -170,8 +175,9 @@ def update_assignee(cessionaria_cnpj):
                     'cessionaria_sacado_duplicadas_data_final', 'cessionaria_sacado_duplicata_status',
                     'cessionaria_sacado_nome', 'cessionaria_sacado_empresa',
                     'cessionaria_sacado_contato', 'cessionaria_sacado_email',
-                    'cessionaria_sacado_data_pagamento'
-                ]}
+                    'cessionaria_sacado_data_pagamento', 'cessionaria_sacado_duplicadas_valor',
+                    'cessionaria_sacado_estado', 'cessionaria_sacado_lagitude', 'cessionaria_sacado_longitude',
+                    'cessionaria_sacado_chance_fraude']}
 
                 assignee_collection.update_one(
                     {'cessionaria_cnpj': cessionaria_cnpj, 'cessionaria_sacado.cessionaria_sacado_id': sacado_id},
@@ -189,7 +195,12 @@ def update_assignee(cessionaria_cnpj):
                     'cessionaria_sacado_empresa': new_sacado.get('cessionaria_sacado_empresa'),
                     'cessionaria_sacado_contato': new_sacado.get('cessionaria_sacado_contato'),
                     'cessionaria_sacado_email': new_sacado.get('cessionaria_sacado_email'),
-                    'cessionaria_sacado_data_pagamento': new_sacado.get('cessionaria_sacado_data_pagamento')
+                    'cessionaria_sacado_data_pagamento': new_sacado.get('cessionaria_sacado_data_pagamento'),
+                    'cessionaria_sacado_duplicadas_valor': new_sacado.get('cessionaria_sacado_duplicadas_valor'),
+                    'cessionaria_sacado_estado': new_sacado.get('cessionaria_sacado_estado'),
+                    'cessionaria_sacado_lagitude': new_sacado.get('cessionaria_sacado_lagitude'),
+                    'cessionaria_sacado_longitude': new_sacado.get('cessionaria_sacado_longitude'),
+                    'cessionaria_sacado_chance_fraude': new_sacado.get('cessionaria_sacado_chance_fraude')
                 }
 
                 assignee_collection.update_one(
@@ -264,6 +275,65 @@ def delete_assignee(cessionaria_cnpj):
             return jsonify({'error': 'Não foi possível excluir a cessionária.'}), 500
 
         return jsonify({'message': 'Cessionária excluída com sucesso!'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@assignee.route('/<cessionaria_cnpj>/loc', methods=['GET'])
+def get_loc_assignee(cessionaria_cnpj):
+    try:
+        # Busca a cessionária com base no CNPJ fornecido
+        cessionaria = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+
+        if not cessionaria:
+            return jsonify({'error': 'Cessionária não encontrada!'}), 404
+
+        # Converte o campo _id para string
+        cessionaria['_id'] = str(cessionaria['_id'])
+
+        # Filtra os dados de `cessionaria_sacado` para manter apenas `estado`, `lagitude`, e `longitude`
+        sacados_simplified = []
+        for sacado in cessionaria.get('cessionaria_sacado', []):
+            sacado_simplificado = {
+                'cessionaria_sacado_estado': sacado.get('cessionaria_sacado_estado'),
+                'cessionaria_sacado_lagitude': sacado.get('cessionaria_sacado_lagitude'),
+                'cessionaria_sacado_longitude': sacado.get('cessionaria_sacado_longitude')
+            }
+            sacados_simplified.append(sacado_simplificado)
+
+        # Substitui a lista original de `cessionaria_sacado` pela versão simplificada
+        cessionaria['cessionaria_sacado'] = sacados_simplified
+
+        return jsonify(cessionaria), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@assignee.route('/<cessionaria_cnpj>/fraudulent_sacados', methods=['GET'])
+def get_assignee_with_fraudulent_sacados(cessionaria_cnpj):
+    try:
+        # Busca a cessionária com base no CNPJ fornecido
+        cessionaria = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+
+        if not cessionaria:
+            return jsonify({'error': 'Cessionária não encontrada!'}), 404
+
+        # Converte o campo _id para string
+        cessionaria['_id'] = str(cessionaria['_id'])
+
+        # Filtra a lista de sacados para manter apenas aqueles com chance de fraude True
+        sacados_fraudulentos = [
+            sacado for sacado in cessionaria.get('cessionaria_sacado', [])
+            if sacado.get('cessionaria_sacado_chance_fraude') == True
+        ]
+
+        # Substitui a lista original de `cessionaria_sacado` pela lista filtrada
+        cessionaria['cessionaria_sacado'] = sacados_fraudulentos
+
+        return jsonify(cessionaria), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
