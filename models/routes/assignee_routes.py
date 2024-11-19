@@ -3,6 +3,7 @@ from bson import ObjectId
 from models.app import mongo
 from models.routes.user_routes import users_collection
 from datetime import datetime
+from flask import jsonify
 
 # Inicialização das coleções do MongoDB
 duplicata_collection = mongo.db.duplicatas
@@ -11,9 +12,6 @@ assignee_collection = mongo.db.assigne
 
 
 # Rota para criação de usuários com validação de termos
-from datetime import datetime
-from flask import jsonify, request
-
 @assignee.route('/createAssignee', methods=['POST'])
 def create_assignee():
     try:
@@ -57,9 +55,6 @@ def create_assignee():
                         'cessionaria_sacado_email': sacado.get('cessionaria_sacado_email'),
                         'cessionaria_sacado_data_pagamento': data_pagamento,
                         'cessionaria_sacado_duplicadas_valor': sacado['cessionaria_sacado_duplicadas_valor'],
-                        'cessionaria_sacado_estado': sacado['cessionaria_sacado_estado'],
-                        'cessionaria_sacado_lagitude': sacado['cessionaria_sacado_lagitude'],
-                        'cessionaria_sacado_longitude': sacado['cessionaria_sacado_longitude'],
                         'cessionaria_sacado_chance_fraude': sacado['cessionaria_sacado_chance_fraude']
                     }
 
@@ -134,7 +129,6 @@ def one_assignee(cessionaria_cnpj):
         return jsonify({'error': str(e)}), 500
 
 
-
 @assignee.route('/<cessionaria_cnpj>/updateAssignee', methods=['PUT'])
 def update_assignee(cessionaria_cnpj):
     try:
@@ -176,7 +170,6 @@ def update_assignee(cessionaria_cnpj):
                     'cessionaria_sacado_nome', 'cessionaria_sacado_empresa',
                     'cessionaria_sacado_contato', 'cessionaria_sacado_email',
                     'cessionaria_sacado_data_pagamento', 'cessionaria_sacado_duplicadas_valor',
-                    'cessionaria_sacado_estado', 'cessionaria_sacado_lagitude', 'cessionaria_sacado_longitude',
                     'cessionaria_sacado_chance_fraude']}
 
                 assignee_collection.update_one(
@@ -197,9 +190,6 @@ def update_assignee(cessionaria_cnpj):
                     'cessionaria_sacado_email': new_sacado.get('cessionaria_sacado_email'),
                     'cessionaria_sacado_data_pagamento': new_sacado.get('cessionaria_sacado_data_pagamento'),
                     'cessionaria_sacado_duplicadas_valor': new_sacado.get('cessionaria_sacado_duplicadas_valor'),
-                    'cessionaria_sacado_estado': new_sacado.get('cessionaria_sacado_estado'),
-                    'cessionaria_sacado_lagitude': new_sacado.get('cessionaria_sacado_lagitude'),
-                    'cessionaria_sacado_longitude': new_sacado.get('cessionaria_sacado_longitude'),
                     'cessionaria_sacado_chance_fraude': new_sacado.get('cessionaria_sacado_chance_fraude')
                 }
 
@@ -212,10 +202,6 @@ def update_assignee(cessionaria_cnpj):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-from datetime import datetime
-from flask import jsonify
 
 
 @assignee.route('/<cessionaria_cnpj>/duplicatas/<status>', methods=['GET'])
@@ -280,36 +266,35 @@ def delete_assignee(cessionaria_cnpj):
         return jsonify({'error': str(e)}), 500
 
 
-
-@assignee.route('/<cessionaria_cnpj>/loc', methods=['GET'])
-def get_loc_assignee(cessionaria_cnpj):
-    try:
-        # Busca a cessionária com base no CNPJ fornecido
-        cessionaria = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
-
-        if not cessionaria:
-            return jsonify({'error': 'Cessionária não encontrada!'}), 404
-
-        # Converte o campo _id para string
-        cessionaria['_id'] = str(cessionaria['_id'])
-
-        # Filtra os dados de `cessionaria_sacado` para manter apenas `estado`, `lagitude`, e `longitude`
-        sacados_simplified = []
-        for sacado in cessionaria.get('cessionaria_sacado', []):
-            sacado_simplificado = {
-                'cessionaria_sacado_estado': sacado.get('cessionaria_sacado_estado'),
-                'cessionaria_sacado_lagitude': sacado.get('cessionaria_sacado_lagitude'),
-                'cessionaria_sacado_longitude': sacado.get('cessionaria_sacado_longitude')
-            }
-            sacados_simplified.append(sacado_simplificado)
-
-        # Substitui a lista original de `cessionaria_sacado` pela versão simplificada
-        cessionaria['cessionaria_sacado'] = sacados_simplified
-
-        return jsonify(cessionaria), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# @assignee.route('/<cessionaria_cnpj>/loc', methods=['GET'])
+# def get_loc_assignee(cessionaria_cnpj):
+#     try:
+#         # Busca a cessionária com base no CNPJ fornecido
+#         cessionaria = assignee_collection.find_one({'cessionaria_cnpj': cessionaria_cnpj})
+#
+#         if not cessionaria:
+#             return jsonify({'error': 'Cessionária não encontrada!'}), 404
+#
+#         # Converte o campo _id para string
+#         cessionaria['_id'] = str(cessionaria['_id'])
+#
+#         # Filtra os dados de `cessionaria_sacado` para manter apenas `estado`, `lagitude`, e `longitude`
+#         sacados_simplified = []
+#         for sacado in cessionaria.get('cessionaria_sacado', []):
+#             sacado_simplificado = {
+#                 'cessionaria_sacado_estado': sacado.get('cessionaria_sacado_estado'),
+#                 'cessionaria_sacado_lagitude': sacado.get('cessionaria_sacado_lagitude'),
+#                 'cessionaria_sacado_longitude': sacado.get('cessionaria_sacado_longitude')
+#             }
+#             sacados_simplified.append(sacado_simplificado)
+#
+#         # Substitui a lista original de `cessionaria_sacado` pela versão simplificada
+#         cessionaria['cessionaria_sacado'] = sacados_simplified
+#
+#         return jsonify(cessionaria), 200
+#
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
 
 
 @assignee.route('/<cessionaria_cnpj>/fraudulent_sacados', methods=['GET'])
