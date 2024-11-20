@@ -1,83 +1,80 @@
+from datetime import datetime
 from flask import Blueprint, jsonify, request
 from models.app import mongo
-from bson import ObjectId
+from werkzeug.utils import secure_filename
+import os
+from models.utils import previsao
 
 # Inicialização da coleção MongoDB
 information = Blueprint('information', __name__)
 information_collection = mongo.db.information
 
+# Diretório onde o arquivo tratado está salvo
+UPLOAD_FOLDER = r'.\models\utils\files'
+APPROVED_FILE = ''
+
+
 # Rota para criar uma nova informação
-@information.route('/create', methods=['POST'])
+@information.route('/create_with_csv', methods=['POST'])
 def create_information():
     try:
-        data = request.get_json(force=True)
-        mes1 = data.get('mes1')
-        mes2 = data.get('mes2')
+        # Verifica se o arquivo foi enviado
+        if 'file' not in request.files:
+            return jsonify({'error': 'Nenhum arquivo enviado.'}), 400
+        
+        file = request.files['file']
+        
+        # Se o arquivo não tiver nome (campo obrigatório)
+        if file.filename == '':
+            return jsonify({'error': 'Nenhum arquivo selecionado.'}), 400
+        
+         # Verifique se o arquivo é um Excel
+        if file and file.filename.endswith(('.xlsx', '.xls')):
+            filename = secure_filename(file.filename)
+            upload_folder = './models/utils/files'
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
 
-        # Validação dos campos obrigatórios
-        if not mes1 or not mes2:
-            return jsonify({'error': 'Os campos mes1 e mes2 são obrigatórios.'}), 400
+            filepath = os.path.join(upload_folder, filename)
+            file.save(filepath)
+        
+        df_tratado, previsao = previsao(filepath)
 
-        # Inserção no MongoDB
-        new_information = {'mes1': mes1, 'mes2': mes2}
-        information_collection.insert_one(new_information)
+        mes_atual = datetime.now().month
+        df_mes_atual = df_tratado[df_tratado['mes_referencia'].dt.month == mes_atual]
 
-        return jsonify({'message': 'Informação criada com sucesso!'}), 201
+        APPROVED_FILE = filename
+
+        return jsonify({
+            'message': 'Arquivo processado com sucesso!',
+            'Previsto': previsao,
+            'Recebido': df_mes_atual
+        }), 201
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Rota para obter todas as informações
-@information.route('/getAll', methods=['GET'])
-def get_all_information():
+
+# Rota para criar uma nova informação
+@information.route('/create_without_csv', methods=['GET'])
+def create_information():
     try:
-        informations = information_collection.find({})
-        informations_list = [{'_id': str(info['_id']), 'mes1': info['mes1'], 'mes2': info['mes2']} for info in informations]
+        filepath = os.path.join(UPLOAD_FOLDER, APPROVED_FILE)
 
-        return jsonify(informations_list), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Verifica se o arquivo existe antes de tentar processá-lo
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Arquivo tratado não encontrado. Por favor, faça o upload primeiro.'}), 404
 
-# Rota para atualizar uma informação pelo ID
-@information.route('/<info_id>/update', methods=['PUT'])
-def update_information(info_id):
-    try:
-        data = request.get_json(force=True)
-        mes1 = data.get('mes1')
-        mes2 = data.get('mes2')
+        df_tratado, previsao = previsao(filepath)
 
-        # Verifica se a informação existe
-        info = information_collection.find_one({'_id': ObjectId(info_id)})
-        if not info:
-            return jsonify({'error': 'Informação não encontrada!'}), 404
+        mes_atual = datetime.now().month
+        df_mes_atual = df_tratado[df_tratado['mes_referencia'].dt.month == mes_atual]
 
-        # Atualiza os campos fornecidos
-        update_data = {}
-        if mes1 is not None:
-            update_data['mes1'] = mes1
-        if mes2 is not None:
-            update_data['mes2'] = mes2
-
-        if update_data:
-            information_collection.update_one({'_id': ObjectId(info_id)}, {'$set': update_data})
-            return jsonify({'message': 'Informação atualizada com sucesso!'}), 200
-        else:
-            return jsonify({'error': 'Nenhum campo válido fornecido para atualização.'}), 400
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Rota para excluir uma informação pelo ID
-@information.route('/<info_id>/delete', methods=['DELETE'])
-def delete_information(info_id):
-    try:
-        # Verifica se a informação existe
-        info = information_collection.find_one({'_id': ObjectId(info_id)})
-        if not info:
-            return jsonify({'error': 'Informação não encontrada!'}), 404
-
-        # Exclui a informação
-        information_collection.delete_one({'_id': ObjectId(info_id)})
-        return jsonify({'message': 'Informação excluída com sucesso!'}), 200
+        return jsonify({
+            'message': 'Arquivo processado com sucesso!',
+            'Previsto': previsao,
+            'Recebido': df_mes_atual
+        }), 201
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
