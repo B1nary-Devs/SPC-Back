@@ -1,22 +1,23 @@
 from datetime import datetime
 from flask import Blueprint, jsonify, request
 from models.app import mongo
+import pandas as pd
 from werkzeug.utils import secure_filename
 import os
-from models.utils import previsao
+from models.utils.previsao import previsao_spc
+import numpy as np
 
 # Inicialização da coleção MongoDB
 information = Blueprint('information', __name__)
-information_collection = mongo.db.information
 
 # Diretório onde o arquivo tratado está salvo
 UPLOAD_FOLDER = r'.\models\utils\files'
-APPROVED_FILE = ''
-
+APPROVED_FILE = None  
 
 # Rota para criar uma nova informação
 @information.route('/create_with_csv', methods=['POST'])
-def create_information():
+def create_with_csv():
+    global APPROVED_FILE
     try:
         # Verifica se o arquivo foi enviado
         if 'file' not in request.files:
@@ -27,23 +28,24 @@ def create_information():
         # Se o arquivo não tiver nome (campo obrigatório)
         if file.filename == '':
             return jsonify({'error': 'Nenhum arquivo selecionado.'}), 400
-        
-         # Verifique se o arquivo é um Excel
-        if file and file.filename.endswith(('.xlsx', '.xls')):
-            filename = secure_filename(file.filename)
-            upload_folder = './models/utils/files'
-            if not os.path.exists(upload_folder):
-                os.makedirs(upload_folder)
 
+         # Verifique se o arquivo é um Excel
+        if file and file.filename.endswith(('.xlsx', '.xls', '.csv')):
+            filename = secure_filename(file.filename)
+            upload_folder = './models/utils/files/'
             filepath = os.path.join(upload_folder, filename)
             file.save(filepath)
         
-        df_tratado, previsao = previsao(filepath)
+        df = pd.read_csv(filepath)
+        df_tratado, previsao = previsao_spc(df)
 
         mes_atual = datetime.now().month
-        df_mes_atual = df_tratado[df_tratado['mes_referencia'].dt.month == mes_atual]
+        df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
+        df_mes_atual = df_mes_atual['total_registros'].tolist()
 
         APPROVED_FILE = filename
+        
+        previsao = previsao.tolist() if isinstance(previsao, (np.ndarray)) else previsao
 
         return jsonify({
             'message': 'Arquivo processado com sucesso!',
@@ -57,18 +59,23 @@ def create_information():
 
 # Rota para criar uma nova informação
 @information.route('/create_without_csv', methods=['GET'])
-def create_information():
+def create_without_csv():
+    global APPROVED_FILE
     try:
         filepath = os.path.join(UPLOAD_FOLDER, APPROVED_FILE)
 
         # Verifica se o arquivo existe antes de tentar processá-lo
         if not os.path.exists(filepath):
             return jsonify({'error': 'Arquivo tratado não encontrado. Por favor, faça o upload primeiro.'}), 404
-
-        df_tratado, previsao = previsao(filepath)
+        
+        df = pd.read_csv(filepath)
+        df_tratado, previsao = previsao_spc(df)
 
         mes_atual = datetime.now().month
-        df_mes_atual = df_tratado[df_tratado['mes_referencia'].dt.month == mes_atual]
+        df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
+        df_mes_atual = df_mes_atual['total_registros'].tolist()
+
+        previsao = previsao.tolist() if isinstance(previsao, (np.ndarray)) else previsao
 
         return jsonify({
             'message': 'Arquivo processado com sucesso!',

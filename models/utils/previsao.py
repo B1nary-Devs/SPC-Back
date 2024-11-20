@@ -37,7 +37,7 @@ def tratamentoDado(df):
     
     return df_mensal
 
-def previsao(df):
+def previsao_spc(df):
     df_tratado = tratamentoDado(df)
     previsao = prever_proximos_meses(df_tratado)
     return df_tratado, previsao
