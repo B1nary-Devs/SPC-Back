@@ -56,8 +56,8 @@ def create_with_csv():
 
         return jsonify({
             'message': 'Arquivo processado com sucesso!',
-            'Previsto': previsao,
-            'Mes Previsto':  meses_registros
+            'previsto': previsao,
+            'mes_previsto':  meses_registros
         }), 201
     
     except Exception as e:
