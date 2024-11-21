@@ -15,7 +15,7 @@ def prever_proximos_meses(df, order=(1,1,0)):
     model_fit = modelo.fit()
 
     # Previsão para os próximos 2 meses
-    forecast = model_fit.forecast(steps=1)
+    forecast = model_fit.forecast(steps=4)
 
     previsoes = np.array(forecast)
     # Ajustar a previsão para inteiros

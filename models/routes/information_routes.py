@@ -39,18 +39,25 @@ def create_with_csv():
         df = pd.read_csv(filepath)
         df_tratado, previsao = previsao_spc(df)
 
-        mes_atual = datetime.now().month
-        df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
-        df_mes_atual = df_mes_atual['total_registros'].tolist()
+        # mes_atual = datetime.now().month
+        # df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
+        # df_mes_atual = df_mes_atual
 
         APPROVED_FILE = filename
         
         previsao = previsao.tolist() if isinstance(previsao, (np.ndarray)) else previsao
+        df_tratadoRegistro = df_tratado['total_registros'].tolist()
+        df_tratadoMes = df_tratado['mes_referencia'].tolist()
+
+        # Cria uma lista de dicionários para combinar mês e registro
+        meses_registros = []
+        for mes, registro in zip(df_tratadoMes, df_tratadoRegistro):
+            meses_registros.append({'Mes': mes, 'Registro': registro })
 
         return jsonify({
             'message': 'Arquivo processado com sucesso!',
             'Previsto': previsao,
-            'Recebido': df_mes_atual
+            'Mes Previsto':  meses_registros
         }), 201
     
     except Exception as e:
