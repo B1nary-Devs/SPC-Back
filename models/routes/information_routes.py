@@ -9,6 +9,7 @@ import numpy as np
 
 # Inicialização da coleção MongoDB
 information = Blueprint('information', __name__)
+prevision_collection = mongo.db.prevision 
 
 # Diretório onde o arquivo tratado está salvo
 UPLOAD_FOLDER = r'.\models\utils\files'
@@ -17,6 +18,7 @@ APPROVED_FILE = None
 # Rota para criar uma nova informação
 @information.route('/create_with_csv', methods=['POST'])
 def create_with_csv():
+    insertPrevisao()
     global APPROVED_FILE
     try:
         # Verifica se o arquivo foi enviado
@@ -37,28 +39,26 @@ def create_with_csv():
             file.save(filepath)
         
         df = pd.read_csv(filepath)
-        df_tratado, previsao = previsao_spc(df)
-
-        # mes_atual = datetime.now().month
-        # df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
-        # df_mes_atual = df_mes_atual
+        previsao = previsao_spc(df)
+        
+        mes_atual = datetime.now().month
+        ano_atual = datetime.now().year
 
         APPROVED_FILE = filename
+        #update mongo
+        prevision_collection.update_one(
+            {'ano': ano_atual, 'dados.mes': 9}, 
+            {'$set': {'dados.$.previsto': previsao}},
+            upsert=True
+        )
         
-        previsao = previsao.tolist() if isinstance(previsao, (np.ndarray)) else previsao
-        df_tratadoRegistro = df_tratado['total_registros'].tolist()
-        df_tratadoMes = df_tratado['mes_referencia'].tolist()
+        # Recupera as previsões atualizadas do banco de dados
+        prevision = prevision_collection.find({'ano': ano_atual})
 
-        # Cria uma lista de dicionários para combinar mês e registro
-        meses_registros = []
-        for mes, registro in zip(df_tratadoMes, df_tratadoRegistro):
-            meses_registros.append({'Mes': mes, 'Registro': registro })
+        # Converte para um formato serializável (incluindo a conversão do _id para string)
+        prevision_json = [{**previsions, '_id': str(previsions['_id'])} for previsions in prevision]
 
-        return jsonify({
-            'message': 'Arquivo processado com sucesso!',
-            'previsto': previsao,
-            'mes_previsto':  meses_registros
-        }), 201
+        return jsonify({prevision_json}), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -92,3 +92,35 @@ def create_without_csv():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def insertPrevisao():
+    try:
+        prevision = [{
+            'ano': 2024,
+             'dados': [
+                {'mes': 1, 'previsto': 0, 'recebido': 3208},
+                {'mes': 2, 'previsto': 0, 'recebido': 26003},
+                {'mes': 3, 'previsto': 0, 'recebido': 114707},
+                {'mes': 4, 'previsto': 0, 'recebido': 12250},
+                {'mes': 5, 'previsto': 0, 'recebido': 4673},
+                {'mes': 6, 'previsto': 7165, 'recebido': 7319},
+                {'mes': 7, 'previsto': 6442, 'recebido': 5499},
+                {'mes': 8, 'previsto': 6054, 'recebido': 7471},
+                {'mes': 9, 'previsto': 0, 'recebido': 0},
+                {'mes': 10, 'previsto': 0, 'recebido': 0},
+                {'mes': 11, 'previsto': 0, 'recebido': 0},
+                {'mes': 12, 'previsto': 0, 'recebido': 0}
+            ]
+        }]
+        for x in prevision:
+            existing_prevision = prevision_collection.find_one({'ano': x['ano']})
+
+            if (existing_prevision):
+                continue
+            else:
+                prevision_collection.insert_one(x)
+
+        return
+    except Exception as e:
+        print(f"Erro: {str(e)}")

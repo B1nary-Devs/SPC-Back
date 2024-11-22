@@ -3,10 +3,11 @@ from datetime import datetime, timedelta
 
 
 def insertSql():
-    insertTermo()
-    insertAdmin()
-    insertCessionaria()
-    insertDuplicatas()
+    # insertTermo()
+    # insertAdmin()
+    # insertCessionaria()
+    # insertDuplicatas()
+    insertPrevisao()
    
 
 def insertTermo():
@@ -167,6 +168,86 @@ def insertDuplicatas():
             existing_duplicata = duplicata_collection.find_one({'duplicata_id': duplicata['duplicata_id']})
             if not existing_duplicata:
                 duplicata_collection.insert_one(duplicata)
+
+    except Exception as e:
+        print(f"Erro: {str(e)}")
+
+def insertPrevisao():
+    try:
+        prevision_collection = mongo.db.prevision # colecao de termos do mongo db
+
+        prevision = [{
+            'ano': 2024,
+            'dados': [
+                {
+                    'mes': 1,
+                    'previsto': 0 ,
+                    'recebido': 3208
+                },
+                {
+                    'mes': 2,
+                    'previsto': 0 ,
+                    'recebido': 26003
+                },
+                {
+                    'mes': 3,
+                    'previsto': 0 ,
+                    'recebido': 114707
+                },
+                {
+                    'mes': 4,
+                    'previsto': 0 ,
+                    'recebido': 12250
+                },
+                {
+                    'mes': 5,
+                    'previsto': 0 ,
+                    'recebido': 4673
+                },
+                {
+                    'mes': 6,
+                    'previsto': 7165 ,
+                    'recebido': 7319
+                },
+                {
+                    'mes': 7,
+                    'previsto': 6442 ,
+                    'recebido': 5499
+                },
+                {
+                    'mes': 8,
+                    'previsto': 6054 ,
+                    'recebido': 7471
+                },
+                {
+                    'mes': 9,
+                    'previsto': 6786 ,
+                    'recebido': 0
+                },
+                {
+                    'mes': 10,
+                    'previsto': 0 ,
+                    'recebido': 0
+                },
+                {
+                    'mes': 11,
+                    'previsto': 0 ,
+                    'recebido': 0
+                },
+                {
+                    'mes': 12,
+                    'previsto': 0 ,
+                    'recebido': 0
+                }
+            ]
+        }]
+        for x in prevision:
+            existing_prevision = prevision_collection.find_one({'ano': x['ano']})
+
+            if (existing_prevision):
+                continue
+            else:
+                prevision_collection.insert_one(x)
 
     except Exception as e:
         print(f"Erro: {str(e)}")

@@ -3,25 +3,20 @@ from statsmodels.tsa.arima.model import ARIMA
 import numpy as np
 
 def prever_proximos_meses(df, order=(1,1,0)):
-
-    df = df[~df['mes_referencia'].isin([9, 10, 11, 12])]
-
-    df['data'] = pd.to_datetime(df['mes_referencia'].astype(str), format='%m')
-    df.set_index('data', inplace=True)
-    df.index = pd.date_range(start=df.index[0], periods=len(df), freq='MS')
-    
     # Escolher o modelo ARIMA com a ordem fornecida
     modelo = ARIMA(df['total_registros'], order=order)
     model_fit = modelo.fit()
 
-    # Previsão para os próximos 2 meses
-    forecast = model_fit.forecast(steps=4)
+    #Previsão do proximo mes
+    forecast = model_fit.forecast(steps=1)
 
-    previsoes = np.array(forecast)
-    # Ajustar a previsão para inteiros
-    previsoes = previsoes.astype(int)
+    # Convertendo o numpy.ndarray para lista de Python
+    forecast_list = forecast.tolist()
 
-    return previsoes
+    # Convertendo para tipos nativos (int) para evitar o erro de serialização
+    forecast_list = [int(item) for item in forecast_list]
+
+    return forecast_list
 
 
 def tratamentoDado(df):
@@ -29,15 +24,19 @@ def tratamentoDado(df):
 
     # Extrai o mês da coluna de datas
     df['mes_referencia'] = df['created_at'].dt.month
-    
+    # Extrai o ano da coluna de datas
+    df['ano_referencia'] = df['created_at'].dt.year
+
     # Agora podemos agrupar por mês e período (antes ou após o dia 15) e contar os registros (total_registros)
-    df_mensal = df.groupby(['mes_referencia']).agg(
+    df_mensal = df.groupby(['mes_referencia', 'ano_referencia']).agg(
         total_registros=('id_x', 'size')
     ).reset_index()
-    
-    return df_mensal
+
+    df_anual = df_mensal[df_mensal['ano_referencia'] == 2024]
+
+    return df_anual
 
 def previsao_spc(df):
     df_tratado = tratamentoDado(df)
     previsao = prever_proximos_meses(df_tratado)
-    return df_tratado, previsao
+    return previsao
