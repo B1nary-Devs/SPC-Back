@@ -8,7 +8,7 @@ def prever_proximos_meses(df, order=(1,1,0)):
     model_fit = modelo.fit()
 
     #Previsão do proximo mes
-    forecast = model_fit.forecast(steps=1)
+    forecast = model_fit.forecast(steps=2)
 
     # Convertendo o numpy.ndarray para lista de Python
     forecast_list = forecast.tolist()
@@ -39,4 +39,4 @@ def tratamentoDado(df):
 def previsao_spc(df):
     df_tratado = tratamentoDado(df)
     previsao = prever_proximos_meses(df_tratado)
-    return previsao
+    return df_tratado, previsao

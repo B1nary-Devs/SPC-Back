@@ -18,8 +18,9 @@ APPROVED_FILE = None
 # Rota para criar uma nova informação
 @information.route('/create_with_csv', methods=['POST'])
 def create_with_csv():
-    insertPrevisao()
+    
     global APPROVED_FILE
+    
     try:
         # Verifica se o arquivo foi enviado
         if 'file' not in request.files:
@@ -39,59 +40,91 @@ def create_with_csv():
             file.save(filepath)
         
         df = pd.read_csv(filepath)
-        previsao = previsao_spc(df)
+        df_tratado, previsao = previsao_spc(df)
         
-        mes_atual = datetime.now().month
         ano_atual = datetime.now().year
-
+        mes_atual = datetime.now().month
+        mes_futuro = (datetime.now().month % 12) + 1
+        mes_previsao =  [mes_atual, mes_futuro ]
+        
+        if df_tratado['mes_referencia'].eq(mes_atual).any():
+            df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
+            df_mes_atual = df_mes_atual['total_registros']
+        else:
+            df_mes_atual = 0
+        
+        
         APPROVED_FILE = filename
+        
         #update mongo
         prevision_collection.update_one(
-            {'ano': ano_atual, 'dados.mes': 9}, 
-            {'$set': {'dados.$.previsto': previsao}},
+            {'ano': ano_atual, 'dados.mes': mes_atual}, 
+            {'$set': {
+                'dados.$.previsto': previsao[0],
+                'dados.$.recebido': df_mes_atual
+                }},
             upsert=True
         )
+        prevision_collection.update_one(
+            {'ano': ano_atual, 'dados.mes': mes_futuro}, 
+            {'$set': {
+                'dados.$.previsto': previsao[1]
+            }}
+        )
+        
+        return jsonify({'meses': mes_previsao, 'previsoes': previsao}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Rota para criar uma nova informação
+@information.route('/previsions', methods=['GET'])
+def get_previsions():
+    try:
+        insertPrevisao()
+        
+        ano_atual = datetime.now().year
         
         # Recupera as previsões atualizadas do banco de dados
         prevision = prevision_collection.find({'ano': ano_atual})
 
         # Converte para um formato serializável (incluindo a conversão do _id para string)
         prevision_json = [{**previsions, '_id': str(previsions['_id'])} for previsions in prevision]
-
-        return jsonify({prevision_json}), 200
+        
+        return jsonify({'previsao': prevision_json}), 200
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# Rota para criar uma nova informação
-@information.route('/create_without_csv', methods=['GET'])
-def create_without_csv():
-    global APPROVED_FILE
-    try:
-        filepath = os.path.join(UPLOAD_FOLDER, APPROVED_FILE)
-
-        # Verifica se o arquivo existe antes de tentar processá-lo
-        if not os.path.exists(filepath):
-            return jsonify({'error': 'Arquivo tratado não encontrado. Por favor, faça o upload primeiro.'}), 404
+        return jsonify({'error': str(e)}), 500    
         
-        df = pd.read_csv(filepath)
-        df_tratado, previsao = previsao_spc(df)
 
-        mes_atual = datetime.now().month
-        df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
-        df_mes_atual = df_mes_atual['total_registros'].tolist()
+# # Rota para criar uma nova informação
+# @information.route('/create_without_csv', methods=['GET'])
+# def create_without_csv():
+#     global APPROVED_FILE
+#     try:
+#         filepath = os.path.join(UPLOAD_FOLDER, APPROVED_FILE)
 
-        previsao = previsao.tolist() if isinstance(previsao, (np.ndarray)) else previsao
+#         # Verifica se o arquivo existe antes de tentar processá-lo
+#         if not os.path.exists(filepath):
+#             return jsonify({'error': 'Arquivo tratado não encontrado. Por favor, faça o upload primeiro.'}), 404
+        
+#         df = pd.read_csv(filepath)
+#         df_tratado, previsao = previsao_spc(df)
 
-        return jsonify({
-            'message': 'Arquivo processado com sucesso!',
-            'Previsto': previsao,
-            'Recebido': df_mes_atual
-        }), 201
+#         mes_atual = datetime.now().month
+#         df_mes_atual = df_tratado[df_tratado['mes_referencia'] == mes_atual]
+#         df_mes_atual = df_mes_atual['total_registros'].tolist()
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#         previsao = previsao.tolist() if isinstance(previsao, (np.ndarray)) else previsao
+
+#         return jsonify({
+#             'message': 'Arquivo processado com sucesso!',
+#             'Previsto': previsao,
+#             'Recebido': df_mes_atual
+#         }), 201
+
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
 
 
 def insertPrevisao():
@@ -107,8 +140,8 @@ def insertPrevisao():
                 {'mes': 6, 'previsto': 7165, 'recebido': 7319},
                 {'mes': 7, 'previsto': 6442, 'recebido': 5499},
                 {'mes': 8, 'previsto': 6054, 'recebido': 7471},
-                {'mes': 9, 'previsto': 0, 'recebido': 0},
-                {'mes': 10, 'previsto': 0, 'recebido': 0},
+                {'mes': 9, 'previsto': 6786, 'recebido': 0},
+                {'mes': 10, 'previsto': 7004, 'recebido': 0},
                 {'mes': 11, 'previsto': 0, 'recebido': 0},
                 {'mes': 12, 'previsto': 0, 'recebido': 0}
             ]
