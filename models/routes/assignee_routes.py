@@ -42,35 +42,6 @@ def create_assignee():
                     duplicada_data_final = sacado.get('cessionaria_sacado_duplicadas_data_final')
                     data_pagamento = sacado.get('cessionaria_sacado_data_pagamento')
 
-                    duplicadas_valor = sacado.get('cessionaria_sacado_duplicadas_valor')
-
-                    # Verifica se o valor da duplicata está presente
-                    #if duplicadas_valor is None:
-                    #    return jsonify({'error': 'Valor da duplicata não fornecido para um sacado'}), 400
-
-                    # Busca duplicatas existentes para o mesmo sacado
-                    cessionaria_sacado_cnpj = sacado.get('cessionaria_sacado_cnpj')
-                    if not cessionaria_sacado_cnpj:
-                        return jsonify({'error': 'CNPJ do sacado não fornecido'}), 400
-
-                    duplicatas_sacado = [
-                        s.get('cessionaria_sacado_duplicadas_valor')
-                        for cessionaria in assignee_collection.find({})
-                        for s in cessionaria.get('cessionaria_sacado', [])
-                        if s.get('cessionaria_sacado_cnpj') == cessionaria_sacado_cnpj
-                    ]
-
-                    # Remove valores nulos ou inválidos
-                    duplicatas_sacado = [valor for valor in duplicatas_sacado if isinstance(valor, (int, float))]
-
-                    # Calcula a média dos valores históricos e verifica fraude
-                    is_fraude = False
-                    if duplicatas_sacado:
-                        media_valores = sum(duplicatas_sacado) / len(duplicatas_sacado)
-                        limite_inferior = media_valores * 0.8
-                        limite_superior = media_valores * 1.2
-                        is_fraude = not (limite_inferior <= duplicadas_valor <= limite_superior)
-
                     # Cria o dicionário do sacado
                     sacado_data = {
                         'cessionaria_sacado_id': sacado['cessionaria_sacado_id'],
@@ -84,7 +55,7 @@ def create_assignee():
                         'cessionaria_sacado_email': sacado.get('cessionaria_sacado_email'),
                         'cessionaria_sacado_data_pagamento': data_pagamento,
                         'cessionaria_sacado_duplicadas_valor': sacado['cessionaria_sacado_duplicadas_valor'],
-                        'cessionaria_sacado_chance_fraude': is_fraude
+                        'cessionaria_sacado_chance_fraude': sacado['cessionaria_sacado_chance_fraude']
 
 
                     }
