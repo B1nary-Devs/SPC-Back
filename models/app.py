@@ -21,6 +21,7 @@ def create_app():
     from .routes.user_term_routes import user_term
     from .routes.verify_routes import verify
     from .routes.duplicata_routes import duplicata
+    from .routes.information_routes import information
 
     app.register_blueprint(user, url_prefix='/users')
     app.register_blueprint(term, url_prefix='/terms')
@@ -28,6 +29,7 @@ def create_app():
     app.register_blueprint(verify, url_prefix='/verify')
     app.register_blueprint(assignee, url_prefix='/assignee')
     app.register_blueprint(duplicata, url_prefix='/duplicata')
+    app.register_blueprint(information, url_prefix='/information')
 
 
     return app
