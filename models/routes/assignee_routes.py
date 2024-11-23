@@ -354,3 +354,32 @@ def get_assignee_with_fraudulent_sacados(cessionaria_cnpj):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@assignee.route('/fraudulent_assignees', methods=['GET'])
+def get_fraudulent_assignees():
+    try:
+        # Busca todas as cessionárias na coleção
+        cessionarias = assignee_collection.find({})
+
+        fraudulent_assignees = []
+
+        # Filtra as cessionárias com sacados fraudulentos
+        for cessionaria in cessionarias:
+            sacados_fraudulentos = [
+                sacado for sacado in cessionaria.get('cessionaria_sacado', [])
+                if sacado.get('cessionaria_sacado_chance_fraude') == True
+            ]
+
+            # Adiciona à lista somente se houver sacados fraudulentos
+            if sacados_fraudulentos:
+                fraudulent_assignees.append({
+                    'cessionaria_nome': cessionaria.get('cessionaria_nome'),
+                    'cessionaria_cnpj': cessionaria.get('cessionaria_cnpj')
+                })
+
+        return jsonify(fraudulent_assignees), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
