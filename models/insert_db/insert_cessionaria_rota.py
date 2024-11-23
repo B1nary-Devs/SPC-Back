@@ -38,4 +38,4 @@ def carregar_e_inserir_cessionarias(arquivo_json):
     print(f"Total de cessionárias que falharam: {total_falhados}")
 
 # Executar a função com o caminho para o arquivo JSON
-carregar_e_inserir_cessionarias('cessionaria.txt')
+carregar_e_inserir_cessionarias('cessionaria3.txt')
