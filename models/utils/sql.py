@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 
 
 def insertSql():
-    # insertTermo()
-    # insertAdmin()
-    # insertCessionaria()
-    # insertDuplicatas()
+    insertTermo()
+    insertAdmin()
+    insertCessionaria()
+    insertDuplicatas()
     insertPrevisao()
    
 
